@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3D Vectors — Interactive Notes</title>
+<meta name="description" content="Interactive 3D vector geometry notes: points, lines, planes and problems, with step-by-step solutions and optional real-physics scenes.">
+<meta name="theme-color" content="#0e1621">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230e1621%27/%3E%3Cpath d=%27M16 17V5%27 stroke=%27%235fd38d%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3Cpath d=%27M16 17l11 6%27 stroke=%27%23ff6b6b%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3Cpath d=%27M16 17L5 23%27 stroke=%27%235ab0ff%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2716%27 cy=%2717%27 r=%272.6%27 fill=%27%23f2c14e%27/%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root{--bg:#0e1621;--ink:#e8e4d8;--mut:#93a4b8;--ac:#f2c14e;--ln:#2b3b50}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+canvas{display:block}
+#ui{position:fixed;inset:0 auto 0 0;width:360px;overflow:auto;padding:14px 14px 28px;background:rgba(19,29,43,.94);border-right:1px solid var(--ln)}
+select,input,button{font:inherit;color:inherit}
+select{width:100%;background:#1b2838;border:1px solid var(--ln);border-radius:6px;padding:7px 8px;margin-bottom:8px}
+h1{font-size:18px;margin:8px 0 6px;font-weight:650}
+#note{white-space:pre-wrap;color:var(--mut);font:12.5px/1.55 ui-monospace,Consolas,monospace;border-left:3px solid var(--ac);padding:2px 0 2px 10px;margin:0 0 12px}
+.r{display:grid;grid-template-columns:78px 1fr 62px;gap:8px;align-items:center;margin:3px 0}
+.r span{color:var(--mut);font-size:12.5px}
+.r select{grid-column:2/4;margin:0}
+.r input[type=number]{width:100%;background:#1b2838;border:1px solid var(--ln);border-radius:5px;padding:3px 5px}
+input[type=range]{accent-color:var(--ac);width:100%}
+.bar{display:flex;gap:8px;margin:12px 0 0}
+button{background:#1b2838;border:1px solid var(--ln);border-radius:6px;padding:6px 10px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+th,td{text-align:left;padding:5px 6px;border-top:1px solid var(--ln);vertical-align:top}
+th{color:var(--mut);font-weight:500;width:40%}
+td{font-family:ui-monospace,Consolas,monospace;color:var(--ac);word-break:break-word}
+.ok th,.ok td{color:#5fd38d}.bad th,.bad td{color:#ff8a8a}
+:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+@media(max-width:720px){#ui{inset:auto 0 0 0;width:100%;height:48vh;border-right:0;border-top:1px solid var(--ln)}}
+.cn{position:fixed;display:flex;gap:4px;z-index:2}
+#tg{top:8px;right:8px}#c2{top:8px;left:368px}#c3{bottom:8px;right:8px}#c4{bottom:8px;left:368px}
+.cn button{width:30px;height:24px;padding:0;font-size:12px;line-height:1;border-radius:5px;opacity:.9;border-color:var(--ac);position:relative}
+.cn button[aria-pressed=false]{opacity:.35;border-color:var(--ln)}
+.cn button[data-l]::after{content:attr(data-l);position:absolute;right:2px;bottom:0;font-size:8px;color:var(--ac)}
+@media(max-width:720px){#c2{left:8px}#c3{bottom:calc(48vh + 8px)}#c4{left:8px;bottom:calc(48vh + 8px)}}
+.hint{margin:10px 0 0;font-size:11.5px;color:var(--mut)}
+#c5{top:40px;right:0;flex-direction:column;gap:3px}
+#c5 button{width:30px;height:28px;font-size:13px;border-radius:6px 0 0 6px;border-right:0}
+body.fs #ui{display:none!important}body.fs:not(.tb) .cn{display:none!important}
+body.fs #c2,body.fs #c4{left:8px}body.fs #c3,body.fs #c4{bottom:8px}body.fs.tb #gear{opacity:.9}
+#tip{position:fixed;z-index:5;pointer-events:none;background:rgba(14,22,33,.96);border:1px solid var(--ac);border-radius:8px;padding:6px 9px;font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--ink);display:none;max-width:220px}
+#tip b{color:var(--ac)}
+#php{position:fixed;top:40px;right:40px;z-index:2;width:190px;background:rgba(19,29,43,.92);border:1px solid var(--ln);border-radius:8px;padding:8px 10px;display:none;font-size:12px}
+#php label{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:center;margin:2px 0;color:var(--mut)}
+#php p{margin:4px 0 0;color:var(--ac);font:11.5px/1.5 ui-monospace,Consolas,monospace}
+#sc{display:none;gap:6px;align-items:center;margin:8px 0 0}#sc.on{display:flex}#sc span{flex:1;color:var(--mut);font-size:12px}
+#out tr.hid{display:none}#out tr.cur th,#out tr.cur td{background:rgba(242,193,78,.16)}
+.bar button[aria-pressed=true]{border-color:var(--ac)}
+body.fs:not(.tb) #php{display:none!important}
+#gear{position:fixed;top:8px;right:8px;z-index:6;width:30px;height:28px;padding:0}
+#gear[aria-pressed=true]{border-color:var(--ac)}
+#tg{right:44px}
+body:not(.tb) .cn{display:none}
+body.fs #gear{width:26px;height:24px;font-size:12px;opacity:.3;top:6px;right:6px}body.fs #gear:hover,body.fs #gear:active,body.fs #gear:focus-visible{opacity:1}
+#ui summary{cursor:pointer;color:var(--ac);font-weight:600;margin:10px 0 4px}
+#rp table{margin-top:4px}
+#rp .hint{border-left:3px solid var(--ln);padding-left:8px}
+.sec{margin:14px 0 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+#nd,#rp,details.hint{border:1px solid var(--ln);border-radius:8px;padding:2px 10px 8px;margin:12px 0;background:rgba(255,255,255,.02)}
+#rp{border-color:#3f6b52}
+#mode{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:6;background:rgba(19,29,43,.92);border:1px solid var(--ln);border-radius:14px;padding:3px 12px;font-size:12px;color:var(--ac);pointer-events:none;white-space:nowrap}
+body.fs #mode{display:none}
+#php b{display:block;color:var(--ac);font-size:10.5px;letter-spacing:.08em;margin-bottom:3px}
+.vc,.ht{position:relative;display:inline-block}.vc::after,.ht::after{position:absolute;left:0;right:0;text-align:center;font-size:.75em;line-height:1;top:-.5em}
+.vc::after{content:"→"}.ht::after{content:"^";top:-.35em}
+#php b{cursor:pointer;user-select:none}#php.min label,#php.min p{display:none}
+@media(max-width:720px){#php{width:150px;right:42px;font-size:11px;opacity:.92}#mode{top:44px;font-size:11px}}
+</style>
+</head>
+<body>
+<div id="mode">Math view</div>
+<button id="gear" title="Show / hide view tools (numbers, symbols, grid, axes, labels, glow, size, fill, rotate, view, screenshot)" aria-label="View tools" aria-pressed="false">⚙</button>
+<div id="tg" class="cn"><button id="bn" title="Show / hide numbers" aria-label="Toggle numbers" aria-pressed="true">123</button><button id="bs" title="Show / hide symbols" aria-label="Toggle symbols" aria-pressed="true">xα</button></div>
+<div id="c2" class="cn"><button id="bg" title="Show / hide grid" aria-label="Toggle grid" aria-pressed="true">▦</button><button id="ba" title="Fade x, y, z axes so the graph stands out" aria-label="Fade axes" aria-pressed="false">╋</button></div>
+<div id="c3" class="cn"><button id="bf" title="Label background: OFF = clean floating text (default). Press to turn the dark sticker ON for clearer reading." aria-label="Label background sticker" aria-pressed="false">◌</button><button id="bt" title="Graph thickness + glow (3 levels)" aria-label="Graph thickness and glow" aria-pressed="false" data-l="0">✦</button></div>
+<div id="c4" class="cn"><button id="bz" title="Label size (3 levels)" aria-label="Label size" aria-pressed="false" data-l="1">Aa</button><button id="bp" title="Plane / box fill: normal, faint, strong" aria-label="Plane fill" aria-pressed="false" data-l="1">◫</button></div>
+<div id="c5" class="cn"><button id="wp" title="Physics mode: animated 3D real-world scene for this demonstration" aria-label="Physics mode" aria-pressed="false">⚛</button><button id="wq" title="Real physics: separate scene + laws panel built from the math (⚛ stays purely aesthetic)" aria-label="Real physics" aria-pressed="false">⚗</button><button id="wy" title="Physics symbols: in ⚗ mode label the scene with real symbols and vector arrows (F, v, B …) instead of algebra. Press again for the algebra view." aria-label="Physics symbols" aria-pressed="false">F</button><button id="wm" title="Physics only: hide the math layer" aria-label="Hide math layer" aria-pressed="false">◑</button><button id="wa" title="Play / pause physics animation" aria-label="Pause animation" aria-pressed="true">⏯</button><button id="wr" title="Auto-rotate" aria-label="Auto-rotate" aria-pressed="false">⟳</button><button id="wh" title="Reset view" aria-label="Reset view">⌂</button><button id="wv" title="View: iso / top / front / right" aria-label="Cycle view" aria-pressed="false" data-l="I">◩</button><button id="ws" title="Save screenshot (PNG)" aria-label="Screenshot">⤓</button></div>
+<div id="tip"></div>
+<div id="php"><b title="Tap to collapse / expand">PHYSICS CONTROLS (⚛ / ⚗) ▾</b><label>Mass<input id="phM" type="range" min=".2" max="4" step=".1" value="1"></label><label>Current<input id="phI" type="range" min="0" max="3" step=".1" value="1"></label><label>Speed<input id="phV" type="range" min="0" max="3" step=".1" value="1"></label><p id="phR"></p></div>
+<div id="ui">
+  <select id="mod" aria-label="Topic"></select>
+  <select id="pre" aria-label="Example from the notes"></select>
+  <h1 id="ttl"></h1>
+  <details open id="nd"><summary>Formulas</summary><div id="note"></div></details>
+  <div class="sec">Inputs</div><div id="pr"></div>
+  <div class="bar"><button id="rot">Auto-rotate</button><button id="rst">Reset view</button><button id="stp" aria-pressed="false">Step-by-step</button></div><div id="sc"><button id="sp" aria-label="Previous step">◀</button><button id="sn" aria-label="Next step">▶</button><button id="sa">⏵ Play</button><span id="sl"></span></div>
+  <div class="sec">① Math result</div><table id="out"></table>
+  <details open id="rp" style="display:none"><summary>③ Real physics laws (⚗ mode)</summary><table id="rpt"></table><table id="rpy"></table><p id="rph" class="hint"></p></details>
+  <details class="hint"><summary>Help &amp; button guide</summary>Double-tap the graph for full screen (double-tap again to exit). Corner buttons: 123 numbers, xα symbols, ▦ grid, ╋ fade axes, ◌ floating labels, ✦ glow/thickness, Aa label size, ◫ plane fill. Right wall: F physics-symbol view of ⚗ (vector symbols + arrows; press again for algebra), ⚛ aesthetic physics scene, ⚗ real-physics scene + laws panel (kept separate from ⚛), ◑ hide math layer, ⏯ pause, ⟳ rotate, ⌂ reset, ◩ view, ⤓ PNG. Only the ⚙ button is always visible: tap it to show or hide all the other buttons (it works in full screen too; double-tap the graph is the only way to enter or leave full screen). Long-press a point to read its coordinates; pinch to zoom. Step-by-step reveals the solution one row at a time. In ⚛ mode, Mass / Current / Speed sliders reshape the scene. ⚙ opens all view tools.</details>
+</div>
+<script>if(!window.THREE||!THREE.OrbitControls)document.body.insertAdjacentHTML('afterbegin','<p style="position:fixed;inset:0;margin:0;display:grid;place-items:center;padding:24px;text-align:center;z-index:99;background:#0e1621;color:#e8e4d8;font:15px system-ui,sans-serif">Could not load the 3D library (three.js). Check your internet connection and reload.</p>');</script>
+<noscript><p style="padding:24px;color:#e8e4d8">This page needs JavaScript.</p></noscript>
+<script>
+const $=s=>document.querySelector(s),V=(x,y,z)=>new THREE.Vector3(x,y,z),X=(a,b)=>new THREE.Vector3().crossVectors(a,b);
+const fx=x=>String(+(+x).toFixed(3)),fv=v=>`(${fx(v.x)}, ${fx(v.y)}, ${fx(v.z)})`;
+const R='#ff6b6b',B='#5ab0ff',N='#5fd38d',Y='#f2c14e',P='#b69cff',O='#ff9f5a',W='#c9d3df';
+const RAD=180/Math.PI,sq=Math.sqrt;
+
+/* =====================================================================
+   3D Vectors — Interactive Notes
+   Layout: scene setup · label engine (canvas sprites; vector arrows/hats are
+   drawn as paths, not font glyphs) · drawing helpers (o) · math topics (M) ·
+   physics layer (PX aesthetic, RP/RS real physics, RY symbol view) · UI ·
+   declutter (label de-overlap) · render loop.
+   ===================================================================== */
+/* ---------- scene ---------- */
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(50,1,.1,500),rd=new THREE.WebGLRenderer({antialias:true});
+rd.setPixelRatio(Math.min(devicePixelRatio,2));rd.setClearColor('#0e1621');document.body.prepend(rd.domElement);
+const HOME=V(13,10,17);camera.position.copy(HOME);
+const ctl=new THREE.OrbitControls(camera,rd.domElement);ctl.enableDamping=true;ctl.autoRotateSpeed=1.4;
+const GR=new THREE.GridHelper(30,30,'#2f4560','#1b2a3c'),AXH=new THREE.AxesHelper(14),NEG=[];scene.add(GR,AXH);
+[[R,[-14,0,0]],[N,[0,-14,0]],[B,[0,0,-14]]].forEach(([c,p])=>{const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(...p),V(0,0,0)]),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.3}));NEG.push(l);scene.add(l);});
+const ST={fl:1,th:0,pm:0,ax:0},LSZ=[1,1.35,1.7],TW=[1,1.8,2.8],PM=[1,.45,1.7];let LI=0;
+const FONT='600 30px system-ui,"Segoe UI",Roboto,"Noto Sans","DejaVu Sans",sans-serif',MK_VEC='⃗',MK_HAT='̂';
+/* split label text into runs; a letter followed by a combining mark becomes {t,mk} so the mark can be drawn as a path */
+function runs(t){const a=[...t],r=[];for(let i=0;i<a.length;i++){const mk=a[i+1];if(mk===MK_VEC||mk===MK_HAT){r.push({t:a[i],mk});i++;}else if(r.length&&!r[r.length-1].mk)r[r.length-1].t+=a[i];else r.push({t:a[i]});}return r;}
+function paint(s){const{t,c,k}=s.userData,x=k.getContext('2d'),rs=runs(t);x.font=FONT;
+ const ws=rs.map(r=>x.measureText(r.t).width),w=Math.ceil(ws.reduce((a,b)=>a+b,0))+20,Wp=Math.pow(2,Math.ceil(Math.log2(w)));k.width=Wp;k.height=64;
+ if(!ST.fl){x.fillStyle='rgba(14,22,33,.75)';x.fillRect(0,4,w,38);}
+ x.font=FONT;x.textBaseline='middle';x.lineJoin='round';x.lineCap='round';
+ const pass=halo=>{let px=10;x.lineWidth=halo?5:2.6;x.strokeStyle=halo?'rgba(8,12,18,.9)':c;x.fillStyle=c;
+  rs.forEach((r,i)=>{const wd=ws[i];halo?x.strokeText(r.t,px,24):x.fillText(r.t,px,24);
+   if(r.mk){const a=px+wd*.12,b=px+wd*.88,m=(a+b)/2;x.beginPath();
+    if(r.mk===MK_VEC){x.moveTo(a,7);x.lineTo(b,7);x.moveTo(b-6,2.5);x.lineTo(b,7);x.lineTo(b-6,11.5);}else{x.moveTo(m-6,12);x.lineTo(m,5);x.lineTo(m+6,12);}x.stroke();}
+   px+=wd;});};
+ if(ST.fl)pass(true);pass(false);
+ s.material.map.repeat.set(w/Wp,46/64);s.material.map.offset.set(0,1-46/64);s.material.map.needsUpdate=true;
+ const m=(s.userData.m||1)*LSZ[LI],u=s.userData;u.bw=w/40*m;u.bh=46/40*m;s.scale.set(u.bw,u.bh,1);}
+let SPN=0;function sprite(t,c){const k=document.createElement('canvas'),s=new THREE.Sprite(new THREE.SpriteMaterial({map:(()=>{const x=new THREE.CanvasTexture(k);x.minFilter=THREE.LinearMipmapLinearFilter;x.anisotropy=Math.min(8,rd.capabilities.getMaxAnisotropy());return x;})(),depthTest:false,transparent:true}));s.renderOrder=1000+(SPN=(SPN+1)%5000);s.userData={t,c,k};paint(s);return s;}
+const TK=[],AL=[];
+[['X',R,[15.5,0,0]],['Y',N,[0,15.5,0]],['Z',B,[0,0,15.5]]].forEach(([t,c,p])=>{const s=sprite(t,c);s.position.set(...p);scene.add(s);AL.push(s);});
+for(let i=-12;i<=12;i+=2){if(!i)continue;[['x',R],['y',N],['z',B]].forEach(([a,c])=>{const s=sprite(String(i),c);s.userData.m=.55;paint(s);s.position.set(a=='x'?i:0,a=='y'?i:0,a=='z'?i:0);scene.add(s);TK.push(s);});}
+const STEP={on:0,k:0,n:0,an:[],timer:0};const PTS=[];const G=new THREE.Group();scene.add(G);
+function clr(){PTS.length=0;while(G.children.length){const c=G.children[0];G.remove(c);c.traverse(m=>{m.geometry&&m.geometry.dispose();if(m.material){m.material.map&&m.material.map.dispose();m.material.dispose();}});}}
+
+/* ---------- label engine: numbers vs symbols ---------- */
+const SH={sym:1,num:1},NUM=/\(-?\d+(?:\.\d+)?(?:, ?-?\d+(?:\.\d+)?){2}\)|-?\d+(?:\.\d+)?(?::\d+(?:\.\d+)?)?°?/g;
+function lab(l){l=l.split(/(‹.*?›)/).map(s=>s[0]=='‹'?s:s.replace(NUM,'‹$&›')).join('');const nums=[...l.matchAll(/‹(.*?)›/g)].map(m=>m[1]),
+ full=l.replace(/[‹›]/g,''),sym=l.replace(/‹.*?›/g,'').replace(/(\S)=(?=\s|$)/g,'$1').replace(/[\s:,=]+$/,'').replace(/\s{2,}/g,'  ').trim();
+ return SH.sym&&SH.num?full:SH.sym?sym:SH.num?nums.join('  '):'';}
+/* ---------- drawing helpers (o) ---------- */
+const o={
+ tx(l,p,c=W){const t=lab(l);if(!t)return;const s=sprite(t,c);s.position.copy(p).add(V(0,.65,0));G.add(s);},
+ pt(p,c,l,r=.22){PTS.push({p:p.clone(),c,l:l&&l[0]=='~'?l.slice(1):l});const rr=r*(1+.35*ST.th),m=new THREE.Mesh(new THREE.SphereGeometry(rr,16,12),new THREE.MeshBasicMaterial({color:c}));m.position.copy(p);G.add(m);
+  if(ST.th){const h=new THREE.Mesh(new THREE.SphereGeometry(rr*2.2,16,12),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.14+.06*ST.th,blending:THREE.AdditiveBlending,depthWrite:false}));h.position.copy(p);G.add(h);}if(l)o.tx(l[0]=='~'?l.slice(1):l+' ‹'+fv(p)+'›',p,c);},
+ seg(a,b,c,dash,r=.045){const d=b.clone().sub(a),L=d.length();if(L<1e-6)return;
+  if(dash){const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),new THREE.LineDashedMaterial({color:c,dashSize:.3,gapSize:.2}));l.computeLineDistances();G.add(l);return;}
+  const k=TW[ST.th],q=new THREE.Quaternion().setFromUnitVectors(V(0,1,0),d.clone().normalize()),mid=a.clone().add(b).multiplyScalar(.5);
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r*k,r*k,L,8),new THREE.MeshBasicMaterial({color:c}));m.position.copy(mid);m.quaternion.copy(q);G.add(m);
+  if(ST.th){const h=new THREE.Mesh(new THREE.CylinderGeometry(r*k*2.8,r*k*2.8,L,10),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.12+.06*ST.th,blending:THREE.AdditiveBlending,depthWrite:false}));h.position.copy(mid);h.quaternion.copy(q);G.add(h);}},
+ ln(a,d,c,r=.04){const u=d.clone().normalize().multiplyScalar(30);o.seg(a.clone().sub(u),a.clone().add(u),c,0,r);},
+ arr(a,v,c,l,val){if(v.length()<1e-6)return;G.add(new THREE.ArrowHelper(v.clone().normalize(),a,v.length(),c,.55*(1+.25*ST.th),.28*(1+.5*ST.th)));if(ST.th)o.seg(a,a.clone().add(v),c,0,.045);if(l)o.tx(l+' = ‹'+fv(val||v)+'›',a.clone().add(v),c);},
+ dim(a,b,t,c=W){o.tx(t,a.clone().add(b).multiplyScalar(.5),c);},
+ pl(n,d,c,op=.2,size=26,lab){const nn=n.clone().normalize(),g=new THREE.PlaneGeometry(size,size),m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:Math.min(.7,op*PM[ST.pm]),polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2,side:2,depthWrite:false}));
+  m.position.copy(nn).multiplyScalar(d/n.length());m.quaternion.setFromUnitVectors(V(0,0,1),nn);m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.6})));G.add(m);if(lab){let u=X(nn,V(0,1,0));if(u.lengthSq()<1e-6)u=X(nn,V(1,0,0));u.normalize().multiplyScalar(size*.3);o.tx(lab,m.position.clone().add(u),c);}},
+ box(c,L,col,op){const g=new THREE.BoxGeometry(L,L,L),m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:Math.min(.7,op*PM[ST.pm]),polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2,depthWrite:false}));m.position.copy(c);m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:.35})));G.add(m);}
+};
+
+/* ---------- math helpers ---------- */
+function eq(n,d){let s='';[['x',n.x],['y',n.y],['z',n.z]].forEach(([k,c])=>{if(Math.abs(c)<1e-9)return;const a=Math.abs(c);s+=(s?(c<0?' − ':' + '):(c<0?'−':''))+(Math.abs(a-1)<1e-9?'':fx(a))+k;});return (s||'0')+' = '+fx(d);}
+function skew(a1,b1,a2,b2){const n=X(b1,b2),dp=a2.clone().sub(a1);
+ if(n.lengthSq()<1e-9)return{par:1,n,dp,sd:X(dp,b1).length()/b1.length()};
+ const s1=b1.lengthSq(),s2=b2.lengthSq(),s12=b1.dot(b2),d1=dp.dot(b1),d2=dp.dot(b2),dn=s1*s2-s12*s12,t1=(d1*s2-d2*s12)/dn,t2=(d1*s12-d2*s1)/dn;
+ return{n,dp,t1,t2,p1:a1.clone().addScaledVector(b1,t1),p2:a2.clone().addScaledVector(b2,t2),sd:Math.abs(dp.dot(n))/n.length(),tp:dp.dot(n)};}
+const v3=(k,l,x,y,z,r=10)=>['x','y','z'].map((a,i)=>[k+a,l+' '+a,-r,r,.1,[x,y,z][i]]);
+const gv=(s,k)=>V(s[k+'x'],s[k+'y'],s[k+'z']);
+const zero=v=>v.lengthSq()<1e-9;
+const lin=(c,k)=>`${fx(c)}λ ${k<0?'−':'+'} ${fx(Math.abs(k))}`;
+const ERR=m=>[['✗ Error',m]];
+
+/* ---------- topics ---------- */
+const M=[];
+const mod=(g,id,t,f,p,pre,run)=>M.push({g,id,t,f,p:p.flatMap(e=>Array.isArray(e[0])?e:[e]),pre,run});
+
+mod('Points & vectors','coord','Point, coordinate planes, octants',
+'3 axes · 3 planes [xy, yz, zx] · 8 octants\nDistance from xy-plane = |z|, yz = |x|, xz = |y|\nFrom axes: PA=√(y²+z²) (x-axis)\n  PB=√(z²+x²) (y-axis), PC=√(x²+y²) (z-axis)',
+v3('p','P',3,7,4),{'Notes Q1: P(3,7,4), feet A on xy, B on yz':{},'Notes: P(2,−3,−1)':{px:2,py:-3,pz:-1}},
+(s,o)=>{const p=gv(s,'p'),{x,y,z}=p,sg=n=>n<0?-1:1,L=9;
+ const oc=['+++','-++','--+','+-+','++-','-+-','---','+--'].indexOf((x<0?'-':'+')+(y<0?'-':'+')+(z<0?'-':'+'));
+ o.box(V(sg(x)*L/2,sg(y)*L/2,sg(z)*L/2),L,N,.05);o.pl(V(0,0,1),0,B,.06,16);o.pl(V(1,0,0),0,R,.06,16);o.pl(V(0,1,0),0,N,.06,16);
+ const F1=V(x,y,0),F2=V(0,y,z),F3=V(x,0,z),Ax=V(x,0,0),Ay=V(0,y,0),Az=V(0,0,z);
+ [[F1,Ax],[F1,Ay],[F2,Ay],[F2,Az],[F3,Ax],[F3,Az]].forEach(([a,b])=>o.seg(a,b,W,1));
+ [Ax,Ay,Az].forEach(a=>o.seg(p,a,O));[[F1,B],[F2,R],[F3,N]].forEach(([f,c])=>o.seg(p,f,c,1));o.dim(p,Ax,'PA=√(y²+z²)='+fx(sq(y*y+z*z)),O);o.dim(p,Ay,'PB=√(z²+x²)='+fx(sq(z*z+x*x)),O);o.dim(p,Az,'PC=√(x²+y²)='+fx(sq(x*x+y*y)),O);o.dim(p,F1,'|z|='+fx(Math.abs(z)),B);o.dim(p,F2,'|x|='+fx(Math.abs(x)),R);o.dim(p,F3,'|y|='+fx(Math.abs(y)),N);
+ o.pt(p,Y,'P',.3);o.pt(F1,B,'A');o.pt(F2,R,'B');o.pt(F3,N,'C');o.pt(Ax,O);o.pt(Ay,O);o.pt(Az,O);o.seg(F1,F2,Y,0,.06);o.dim(F1,F2,'AB=√(x²+z²)='+fx(F1.distanceTo(F2)),Y);
+ return[['Octant',['I','II','III','IV','V','VI','VII','VIII'][oc]+'  ('+['+++','−++','−−+','+−+','++−','−+−','−−−','+−−'][oc]+')'],
+ ['⊥ distance: xy | yz | xz',`|z|=${fx(Math.abs(z))} | |x|=${fx(Math.abs(x))} | |y|=${fx(Math.abs(y))}`],
+ ['Distance from axes',`PA=${fx(sq(y*y+z*z))} (x) · PB=${fx(sq(z*z+x*x))} (y) · PC=${fx(sq(x*x+y*y))} (z)`],
+ ['AB (feet on xy & yz)',`√(x²+z²) = ${fx(F1.distanceTo(F2))}`],['|OP|',fx(p.length())]];});
+
+mod('Points & vectors','section','Distance, section formula, midpoint, centroid',
+'d = √((x₁−x₂)²+(y₁−y₂)²+(z₁−z₂)²)\nInternal [m:n]: (mx₂+nx₁)/(m+n), …\nExternal [m:n]: (mx₂−nx₁)/(m−n), …\nMidpoint = (A+B)/2 · Centroid G = (A+B+C)/3\nAB = B−A , BA = A−B',
+[v3('a','A',3,5,-2),v3('b','B',-4,1,6),v3('c','C',1,-4,3),['m','m',0,10,.1,2],['n','n',0,10,.1,1],['ex','Section',['Internal','External'],'Internal']],
+{'Default':{},'Midpoint (m = n = 1)':{m:1,n:1},'External 3:1':{ex:'External',m:3,n:1}},
+(s,o)=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),{m,n}=s,e=s.ex=='External',den=e?m-n:m+n;
+ o.pt(a,R,'A');o.pt(b,B,'B');o.pt(c,P,'C');o.seg(a,b,W);o.seg(b,c,W,1);o.seg(c,a,W,1);o.dim(a,b,'d=AB='+fx(a.distanceTo(b)),W);
+ const ab=b.clone().sub(a),rows=[['Distance AB',fx(ab.length())],['AB vector',fv(ab)],['BA vector',fv(ab.clone().negate())]];
+ if(Math.abs(den)>1e-9){const bm=b.clone().multiplyScalar(m),an=a.clone().multiplyScalar(n),p=(e?bm.sub(an):bm.add(an)).divideScalar(den);o.pt(p,N,`P ${m}:${n}`,.3);rows.push([(e?'External':'Internal')+` point P [${m}:${n}]`,fv(p)]);}
+ else rows.push(['External with m = n','point at infinity']);
+ const mid=a.clone().add(b).multiplyScalar(.5),g=a.clone().add(b).add(c).divideScalar(3);o.pt(mid,Y,'Mid');o.pt(g,O,'G');
+ rows.push(['Midpoint of AB',fv(mid)],['Centroid G of ABC',fv(g)]);return rows;});
+
+mod('Points & vectors','dc','Direction cosines & direction ratios',
+'l=cosα, m=cosβ, n=cosγ · l²+m²+n² = 1\nDRs = λ(l,m,n) · DC = DR / |DR|\nsin²α+sin²β+sin²γ = 2\nA line has DCs (l,m,n) or (−l,−m,−n)\nVector along line: ai+bj+ck',
+v3('d','DR',2,2,1),{'Notes: DR (2,2,1) → DC (2/3,2/3,1/3)':{},'Notes: DR (1,2,1) → DC 1/√6, 2/√6, 1/√6':{dx:1,dy:2,dz:1},'Equally inclined (1,1,1)':{dx:1,dy:1,dz:1}},
+(s,o)=>{const v=gv(s,'d'),L=v.length();if(L<1e-9)return ERR('DR cannot be (0,0,0)');const u=v.clone().divideScalar(L),{x,y,z}=v,al=Math.acos(u.x)*RAD,be=Math.acos(u.y)*RAD,ga=Math.acos(u.z)*RAD;
+ o.arr(V(0,0,0),v,Y,'DR');o.arr(V(0,0,0),u.clone().multiplyScalar(Math.min(3,L)),O,'û (l,m,n)',u);
+ o.seg(V(0,0,0),V(x,0,0),R,1);o.seg(V(x,0,0),V(x,y,0),N,1);o.seg(V(x,y,0),v,B,1);o.seg(V(0,0,0),V(0,y,0),N,1);o.seg(V(0,0,0),V(0,0,z),B,1);
+ o.tx('α='+fx(al)+'°  l=cosα='+fx(u.x),V(x,0,0),R);o.tx('β='+fx(be)+'°  m=cosβ='+fx(u.y),V(0,y,0),N);o.tx('γ='+fx(ga)+'°  n=cosγ='+fx(u.z),V(0,0,z),B);
+ const l2=u.lengthSq(),s2=3-l2;
+ return[['|DR|',fx(L)],['DCs (l, m, n)',fv(u)],['Opposite DCs',fv(u.clone().negate())],['Angles α, β, γ',`${fx(al)}°, ${fx(be)}°, ${fx(ga)}°`],['✓ l²+m²+n²',fx(l2)],['sin²α+sin²β+sin²γ',fx(s2)],['Unit vector l i + m j + n k',fv(u)]];});
+
+mod('Points & vectors','ang','Angle between lines, parallel, perpendicular',
+'cosθ = (b₁·b₂) / (|b₁||b₂|)\nParallel: direction ratios proportional\nPerpendicular: b₁·b₂ = 0 (a₁a₂+b₁b₂+c₁c₂=0)\nUnit vector ⊥ both = (b₁×b₂)/|b₁×b₂|',
+[v3('u','b₁',1,2,2),v3('w','b₂',3,2,6)],
+{'Notes: cosθ = 19/21':{},'Parallel (1,2,2) ∥ (2,4,4)':{wx:2,wy:4,wz:4},'Perpendicular at λ=1: (5λ+2,−5,1)·(1,2λ,3)':{ux:7,uy:-5,uz:1,wx:1,wy:2,wz:3},'Adv 2018: ⊥ to (3,1,2) & (1,2,3)':{ux:3,uy:1,uz:2,wx:1,wy:2,wz:3}},
+(s,o)=>{const a=gv(s,'u'),b=gv(s,'w'),c=X(a,b),z0=V(0,0,0);if(zero(a)||zero(b))return ERR('direction vector cannot be zero');
+ const dt=a.dot(b),cs=dt/(a.length()*b.length());o.arr(z0,a,R,'b₁');o.arr(z0,b,B,'b₂');if(!zero(c)){const cu=c.clone().normalize();o.arr(z0,cu.clone().multiplyScalar(4),N,'b₁×b₂ (unit)',cu);}o.tx('θ='+fx(Math.acos(cs)*RAD)+'°  cosθ='+fx(cs),a.clone().normalize().add(b.clone().normalize()).multiplyScalar(1.3),W);
+ const rows=[['b₁·b₂',fx(dt)],['cosθ',fx(cs)],['θ',fx(Math.acos(cs)*RAD)+'°']];
+ rows.push(zero(c)?['✓ Parallel','ratios proportional']:['Not parallel','b₁×b₂ = '+fv(c)]);rows.push(Math.abs(dt)<1e-9?['✓ Perpendicular','b₁·b₂ = 0']:['Not perpendicular','']);
+ if(!zero(c))rows.push(['Unit ⊥ to both',fv(c.clone().normalize())]);return rows;});
+
+mod('Points & vectors','perp','Find λ so that lines are perpendicular',
+'L₁: (x−5)/(5λ+2) = (2−y)/5 = (1−z)/−1 → b₁ = (5λ+2, −5, 1)\nL₂: x/1 = (2y+1)/(4λ) = (1−z)/−3 → b₂ = (1, 2λ, 3)\nb₁·b₂ = 5λ+2−10λ+3 = 5 − 5λ = 0 ⇒ λ = 1',
+[['l','λ',-3,3,.01,0]],{'λ = 1 → perpendicular':{l:1}},
+(s,o)=>{const l=s.l,a=V(5*l+2,-5,1),b=V(1,2*l,3),z0=V(0,0,0),dt=a.dot(b);o.arr(z0,a.clone().multiplyScalar(.5),R,'b₁',a);o.arr(z0,b,B,'b₂');o.tx('b₁·b₂='+fx(dt)+(Math.abs(dt)<.03?'  ⊥':''),a.clone().multiplyScalar(.25).add(b.clone().multiplyScalar(.5)),Y);
+ return[['b₁',fv(a)],['b₂',fv(b)],['b₁·b₂ = 5 − 5λ',fx(dt)],Math.abs(dt)<.03?['✓ Perpendicular','λ = 1']:['θ',fx(a.angleTo(b)*RAD)+'°'],['Answer','λ = 1']];});
+
+mod('Points & vectors','cop','Coplanar vectors [a b c] = 0',
+'Two non-zero vectors are always coplanar\nThree vectors a, b, c coplanar ⇔ [a b c] = a·(b×c) = 0\n|[a b c]| = volume of the parallelepiped',
+[v3('a','a',3,0,0),v3('b','b',0,3,0),v3('c','c',1,2,3)],{'Not coplanar (box volume 27)':{cx:0,cy:0,cz:3},'Coplanar: c = a + b':{cx:3,cy:3,cz:0}},
+(s,o)=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),z0=V(0,0,0),t=a.dot(X(b,c));o.arr(z0,a,R,'a');o.arr(z0,b,N,'b');o.arr(z0,c,B,'c');o.tx('V=|[a b c]|='+fx(Math.abs(t)),a.clone().add(b).add(c).multiplyScalar(.5),Y);
+ [[a,b],[b,c],[a,c]].forEach(([u,v])=>{o.seg(u,u.clone().add(v),W,1);o.seg(v,u.clone().add(v),W,1);});const ab=a.clone().add(b),bc=b.clone().add(c),ac=a.clone().add(c),all=ab.clone().add(c);
+ [[ab,all],[bc,all],[ac,all]].forEach(([u,v])=>o.seg(u,v,W,1));
+ return[['[a b c]',fx(t)],['Volume',fx(Math.abs(t))],Math.abs(t)<1e-6?['✓ Coplanar','[a b c] = 0']:['✗ Not coplanar','spans a parallelepiped']];});
+
+mod('Lines','line','Line through two points · point at a distance',
+'(x−x₁)/(x₂−x₁) = (y−y₁)/(y₂−y₁) = (z−z₁)/(z₂−z₁) = λ\nParametric point R = (aλ+x₁, bλ+y₁, cλ+z₁)\nVector form r = a + λb\nPR = d ⇒ R = P ± d·b · OR = distance from origin',
+[v3('p','P',1,-2,3),v3('q','Q',5,-4,7),['t','λ',-3,3,.01,1.5],['d','PR = d',0,15,.1,9]],
+{'Notes: P(1,−2,3), Q(5,−4,7), PR=9 → R(7,−5,9), R′(−5,1,−3)':{},'Notes: R on PQ with x=4 → OR=2√14':{px:2,py:-3,pz:4,qx:8,qy:0,qz:10,t:.333,d:0}},
+(s,o)=>{const p=gv(s,'p'),q=gv(s,'q'),b=q.clone().sub(p);if(zero(b))return ERR('P and Q coincide');const u=b.clone().normalize(),r=p.clone().addScaledVector(b,s.t),z0=V(0,0,0);
+ o.ln(p,b,Y,.03);o.pt(p,R,'P');o.pt(q,B,'Q');o.pt(r,N,'R at λ',.28);o.seg(z0,r,N,1);o.dim(z0,r,'OR='+fx(r.length()),N);o.dim(p,r,'PR=|λ||PQ|='+fx(Math.abs(s.t)*b.length()),Y);o.tx('L: r = a + λb',p.clone().addScaledVector(u,-4),Y);const rows=[['Direction (a,b,c)',fv(b)],['Vector form r = a + λb',`${fv(p)} + λ${fv(b)}`],['Parametric point',`(${lin(b.x,p.x)}, ${lin(b.y,p.y)}, ${lin(b.z,p.z)})`],['R(λ), PR',fv(r)+', '+fx(Math.abs(s.t)*b.length())],['|OR|',fx(r.length())]];
+ if(s.d>0){const r1=p.clone().addScaledVector(u,s.d),r2=p.clone().addScaledVector(u,-s.d);o.pt(r1,O,'R',.28);o.pt(r2,P,'R′',.28);o.seg(z0,r1,O,1);o.seg(z0,r2,P,1);o.dim(p,r1,'PR=d='+fx(s.d),O);o.dim(z0,r1,'OR='+fx(r1.length()),O);o.dim(z0,r2,'OR′='+fx(r2.length()),P);
+  rows.push(['PR = d → R',fv(r1)+'  |OR|='+fx(r1.length())],['R′',fv(r2)+'  |OR′|='+fx(r2.length())],['α²+β²+γ² of R',fx(r1.lengthSq())]);}return rows;});
+
+mod('Lines','two','Two lines: intersect · skew · parallel',
+'Skew SD = |(a₂−a₁)·(b₁×b₂)| / |b₁×b₂|\nParallel: SD = |(a₂−a₁)×b| / |b|\nIntersect ⇔ [a₂−a₁ b₁ b₂] = 0 (SD = 0)\nCoplanar ⇔ intersecting or parallel\nPOI: equate coordinates of λ and μ',
+[v3('a','a₁',-1,-2,-1),v3('b','b₁',3,1,2),v3('c','a₂',2,-2,3),v3('d','b₂',1,2,3)],
+{'Adv 2018: skew, SD = 17/(5√3)':{},'Notes: point of intersection (5,−3,3)':{ax:2,ay:1,az:-2,bx:6,by:-8,bz:10,cx:-1,cy:-10,cz:5,dx:6,dy:7,dz:-2},'Parallel lines':{ax:0,ay:0,az:0,bx:1,by:2,bz:2,cx:1,cy:3,cz:0,dx:2,dy:4,dz:4}},
+(s,o)=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');if(zero(b1)||zero(b2))return ERR('direction vector cannot be zero');
+ o.ln(a1,b1,R);o.ln(a2,b2,B);o.pt(a1,R,'a₁');o.pt(a2,B,'a₂');o.tx('L₁: r=a₁+λb₁',a1.clone().add(b1.clone().normalize().multiplyScalar(5)),R);o.tx('L₂: r=a₂+μb₂',a2.clone().add(b2.clone().normalize().multiplyScalar(5)),B);const k=skew(a1,b1,a2,b2),th=Math.acos(Math.min(1,Math.abs(b1.dot(b2))/sq(b1.lengthSq()*b2.lengthSq())))*RAD,rows=[];
+ if(k.par){const f=a2.clone().addScaledVector(b2,a1.clone().sub(a2).dot(b2)/b2.lengthSq());o.pt(f,Y,'',.2);o.seg(a1,f,Y,0,.06);o.dim(a1,f,'SD='+fx(k.sd),Y);const nn=X(k.dp,b1);if(!zero(nn))o.pl(nn,nn.dot(a1),P,.12,26,'Π: ‹'+eq(nn,nn.dot(a1))+'›');
+  rows.push(['Relation',k.sd<1e-6?'Coincident lines':'✓ Parallel (coplanar)'],['SD = |(a₂−a₁)×b|/|b|',fx(k.sd)],['Angle','0°']);}
+ else{const ix=k.sd<1e-4;o.pt(k.p1,Y,ix?'POI':'P',.25);if(!ix){o.pt(k.p2,Y,'Q',.25);o.dim(k.p1,k.p2,'SD='+fx(k.sd),Y);}o.seg(k.p1,k.p2,Y,0,.07);if(ix)o.pl(k.n,k.n.dot(a1),P,.12,26,'Π: ‹'+eq(k.n,k.n.dot(a1))+'›');
+  rows.push(['Relation',ix?'✓ Intersecting (coplanar)':'Skew — non-parallel, non-intersecting'],['[a₂−a₁ b₁ b₂]',fx(k.tp)],['Shortest distance',fx(k.sd)],['b₁×b₂',fv(k.n)],['Unit ⊥ to both',fv(k.n.clone().normalize())],['Angle between lines',fx(th)+'°']);
+  rows.push(ix?['Point of intersection',fv(k.p1)+'  (λ='+fx(k.t1)+', μ='+fx(k.t2)+')']:['Closest points',fv(k.p1)+' ↔ '+fv(k.p2)]);}return rows;});
+
+mod('Lines','copk','Coplanar lines — find k',
+'L₁: (x−2)/1 = (y−3)/1 = (z−4)/−k\nL₂: (x−1)/k = (y−4)/2 = (z−5)/1\n[a₂−a₁ b₁ b₂] = −k²−3k = 0 ⇒ k = 0 or −3\nAnswer: exactly two values',
+[['k','k',-5,2,.05,1]],{'k = 0':{k:0},'k = −3':{k:-3}},
+(s,o)=>{const k=s.k,a1=V(2,3,4),b1=V(1,1,-k),a2=V(1,4,5),b2=V(k,2,1);o.ln(a1,b1,R);o.ln(a2,b2,B);o.pt(a1,R,'a₁');o.pt(a2,B,'a₂');
+ const q=skew(a1,b1,a2,b2),det=a2.clone().sub(a1).dot(X(b1,b2));o.tx('L₁: b₁=‹(1,1,−k)›',a1.clone().add(b1.clone().normalize().multiplyScalar(4)),R);o.tx('L₂: b₂=‹(k,2,1)›',a2.clone().add(b2.clone().normalize().multiplyScalar(4)),B);o.tx('[a₂−a₁ b₁ b₂] = −k²−3k = '+fx(det),a1.clone().add(a2).multiplyScalar(.5).add(V(0,1.2,0)),P);if(!q.par){const cp=q.sd<1e-3;o.pt(q.p1,Y,cp?'POI':'',.25);if(!cp){o.pt(q.p2,Y,'',.25);o.dim(q.p1,q.p2,'SD='+fx(q.sd),Y);}o.seg(q.p1,q.p2,Y,0,.07);}
+ return[['k',fx(k)],['[a₂−a₁ b₁ b₂] = −k²−3k',fx(det)],Math.abs(det)<1e-3?['✓ Coplanar','intersecting']:['✗ Not coplanar','SD = '+fx(q.sd)],['Coplanar for','k = 0 and k = −3']];});
+
+mod('Lines','foot','Foot of perpendicular · image · distance from a line',
+'Q = (aλ+x₁, bλ+y₁, cλ+z₁) · PQ·b = 0 ⇒ λ\nImage P′ = 2Q − P (Q is the midpoint)\nMethod 1: foot Q, then distance PQ\nMethod 2: |PR × b| / |b|, R on the line',
+[v3('p','P',0,2,3),v3('a','R (on line)',-3,1,-4),v3('b','b',5,2,3)],
+{'Notes: P(0,2,3), line (x+3)/5=(y−1)/2=(z+4)/3 → foot (2,3,−1)':{},'Notes: distance of (0,2,3) from (x−3)/2=(y−1)/1=(z+1)/2 = 5':{ax:3,ay:1,az:-1,bx:2,by:1,bz:2},'Notes: image of (1,2,3) in (x−6)/3=(y−7)/2=(z−7)/−2':{px:1,py:2,pz:3,ax:6,ay:7,az:7,bx:3,by:2,bz:-2}},
+(s,o)=>{const p=gv(s,'p'),a=gv(s,'a'),b=gv(s,'b');if(zero(b))return ERR('b cannot be zero');const l=p.clone().sub(a).dot(b)/b.lengthSq(),q=a.clone().addScaledVector(b,l),im=q.clone().multiplyScalar(2).sub(p);
+ o.ln(a,b,Y);o.pt(a,W,'R',.15);o.tx('L: r=a+λb',a.clone().addScaledVector(b.clone().normalize(),-5),Y);o.pt(p,R,'P',.28);o.pt(q,N,'Q foot',.28);o.pt(im,P,'P′',.28);o.seg(p,im,W,1);o.seg(p,q,O,0,.06);o.dim(p,q,'PQ='+fx(p.distanceTo(q)),O);o.dim(q,im,'QP′='+fx(p.distanceTo(q)),P);
+ return[['λ  (from PQ·b = 0)',fx(l)],['Foot of ⊥  Q',fv(q)],['Distance — method 1 (PQ)',fx(p.distanceTo(q))],['Distance — method 2 |PR×b|/|b|',fx(X(p.clone().sub(a),b).length()/b.length())],['Image P′',fv(im)]];});
+
+mod('Planes','plane','Plane ax+by+cz=d · distance · foot · image',
+'Normal n=(a,b,c)=DRs · DCs = ±n/|n|\nVector form r·n = d · Normal form r·n = d/|n|\nIntercept x/α+y/β+z/γ = 1\nDist = |ax₁+by₁+cz₁−d|/√(a²+b²+c²)\nFoot Q = P−tn · Image P′ = P−2tn, t=(n·P−d)/|n|²\nxy: z=0 · yz: x=0 · xz: y=0',
+[v3('n','n',2,-3,4),['d','d',-30,30,.1,12],v3('p','P',6,7,8)],
+{'Original: 2x − 3y + 4z = 12':{},'Notes: 2x+y+2z=5 (DCs 2/3,1/3,2/3)':{nx:2,ny:1,nz:2,d:5},'Notes: xy-plane (z=0)':{nx:0,ny:0,nz:1,d:0,pz:5},'Adv 2010: x+2y−2z=10, P(1,−2,1) → foot (8/3,4/3,−7/3)':{nx:1,ny:2,nz:-2,d:10,px:1,py:-2,pz:1},'Adv 2006: x+y+1=0, P(1,2,2) → 2√2':{nx:1,ny:1,nz:0,d:-1,px:1,py:2,pz:2},'Adv 2016: image of (3,1,7) in x−y+z=3 → (−1,5,3)':{nx:1,ny:-1,nz:1,d:3,px:3,py:1,pz:7}},
+(s,o)=>{const n=gv(s,'n'),d=s.d,pp=gv(s,'p'),L=n.length();if(L<1e-9)return ERR('normal cannot be (0,0,0)');const nh=n.clone().divideScalar(L),f0=n.clone().multiplyScalar(d/n.lengthSq());
+ o.pl(n,d,N,.2,26,'Π: ‹'+eq(n,d)+'›');o.arr(f0,nh.clone().multiplyScalar(3),Y,'n',nh);o.pt(V(0,0,0),W,'O',.15);o.seg(V(0,0,0),f0,W,1);o.dim(V(0,0,0),f0,'p='+fx(Math.abs(d)/L),W);
+ const ic=[],ax=[[n.x,V(d/n.x,0,0),R,'α'],[n.y,V(0,d/n.y,0),N,'β'],[n.z,V(0,0,d/n.z),B,'γ']];ax.forEach(([c,p,col,l])=>{if(Math.abs(c)>1e-9&&p.length()<15){o.pt(p,col,l+'='+fx(p.x+p.y+p.z),.2);ic.push(fx(p.x+p.y+p.z));}else ic.push('∞');});
+ const t=(n.dot(pp)-d)/n.lengthSq(),q=pp.clone().addScaledVector(n,-t),im=pp.clone().addScaledVector(n,-2*t);
+ o.pt(pp,O,'P',.3);o.pt(q,R,'Foot Q',.28);o.pt(im,P,'P′',.3);o.seg(pp,im,W,1);o.dim(pp,q,'dist='+fx(pp.distanceTo(q)),O);
+ return[['Plane',eq(n,d)],['Normal n = DRs',fv(n)],['DCs ±n/|n|',fv(nh)],['Vector form',`r·${fv(n)} = ${fx(d)}`],['Normal form r·n = p',`p = ${fx(d/L)} (distance from origin)`],['Intercepts α, β, γ',ic.join(', ')],
+ ['Distance of P',fx(Math.abs(n.dot(pp)-d)/L)],['Foot of ⊥ from P',fv(q)],['Image of P',fv(im)]];});
+
+const K=['Three points A, B, C','Point A + normal v','Through A, B ∥ direction v','A is foot of ⊥ from origin','Normal v, distance p from origin'];
+mod('Planes','build','Equation of a plane — all the forms',
+'Point + normal: r·n = a·n\nThree points: (r−a)·(AB×AC) = 0\nThrough A,B ∥ v: n = AB×v · Foot A of ⊥ from O: n = OA\nNormal form r·n = d (d = distance from origin)\nIntercept form x/a + y/b + z/c = 1',
+[['kind','Given',K,K[1]],v3('a','A',2,0,1),v3('b','B',1,-1,3),v3('c','C',0,2,1),v3('v','v',2,1,-1),['p','p',0,15,.1,8]],
+{'Notes: through (2,0,1), normal 2i+j−k → 2x+y−z=3':{},'Notes: three points (Adv 2016: O, (1,2,1), (−1,5,3))':{kind:K[0],ax:0,ay:0,az:0,bx:1,by:2,bz:1,cx:-1,cy:5,cz:3},'Notes: through (2,3,−4),(1,−1,3) ∥ x-axis':{kind:K[2],ax:2,ay:3,az:-4,bx:1,by:-1,bz:3,vx:1,vy:0,vz:0},'Notes: foot of ⊥ from origin is (2,−1,3)':{kind:K[3],ax:2,ay:-1,az:3},'Notes: distance 8 from origin, normal 2i+j+2k':{kind:K[4],vx:2,vy:1,vz:2,p:8}},
+(s,o)=>{const i=K.indexOf(s.kind),A=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),v=gv(s,'v'),ab=b.clone().sub(A);let n=i==0?X(ab,c.clone().sub(A)):i==2?X(ab,v):i==3?A.clone():v.clone();
+ if(zero(n))return ERR('normal is zero (collinear points, or v ∥ AB)');const d=i==4?s.p*n.length():n.dot(A),f0=n.clone().multiplyScalar(d/n.lengthSq());
+ o.pl(n,d,N,.22,26,'Π: ‹'+eq(n,d)+'›');o.arr(f0,n.clone().normalize().multiplyScalar(3),Y,'n',n.clone().normalize());o.pt(V(0,0,0),W,'O',.15);o.dim(V(0,0,0),f0,'p='+fx(Math.abs(d)/n.length()),W);
+ if(i<4)o.pt(A,R,'A');if(i==0){o.pt(b,B,'B');o.pt(c,P,'C');}if(i==2){o.pt(b,B,'B');o.arr(A,v.clone().normalize().multiplyScalar(4),O,'v',v);}if(i==3)o.seg(V(0,0,0),A,W,1);
+ return[['Cartesian form',eq(n,d)],['Normal n',fv(n)],['Vector form',`r·${fv(n)} = ${fx(d)}`],['Normal form r·n = p',`p = ${fx(d/n.length())}`]];});
+
+mod('Planes','pln','Plane containing two lines',
+'Intersecting: (r−a₁)·(b₁×b₂) = 0 or r = a₁+λb₁+μb₂\nParallel: (r−a₁)·((a₂−a₁)×b) = 0\nParallel plane at distance t: n·r = n·a₁ + t',
+[v3('a','a₁',1,-2,0),v3('b','b₁',2,-1,3),v3('c','a₂',1,-2,0),v3('d','b₂',3,4,-1),['t','Parallel plane shift t',-8,8,.01,0]],
+{'Notes: r=(1,−2,0)+λ(2,−1,3)+μ(3,4,−1) → −x+y+z+3=0':{},'Notes: two parallel lines':{ax:0,ay:0,az:0,bx:1,by:1,bz:2,cx:1,cy:-1,cz:0,dx:1,dy:1,dz:2},'Adv 2010: lines (1,2,3)+λ(2,3,4), (2,3,4)+μ(3,4,5), plane x−2y+z=d at distance √6':{ax:1,ay:2,az:3,bx:2,by:3,bz:4,cx:2,cy:3,cz:4,dx:3,dy:4,dz:5,t:2.449}},
+(s,o)=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');if(zero(b1)||zero(b2))return ERR('direction vector cannot be zero');o.ln(a1,b1,R);o.ln(a2,b2,B);o.pt(a1,R,'a₁');o.pt(a2,B,'a₂');
+ o.tx('L₁',a1.clone().add(b1.clone().normalize().multiplyScalar(4)),R);o.tx('L₂',a2.clone().add(b2.clone().normalize().multiplyScalar(4)),B);const dp=a2.clone().sub(a1);let n=X(b1,b2),rel='✓ Intersecting lines';if(zero(n)){n=X(dp,b1);rel='✓ Parallel lines';if(zero(n))return ERR('lines coincide — many planes');}else if(Math.abs(dp.dot(n))>1e-6){return[['✗ Skew lines','[a₂−a₁ b₁ b₂] = '+fx(dp.dot(n))+' ≠ 0 — no plane contains both']];}
+ const d=n.dot(a1);o.pl(n,d,N,.2,26,'Π: ‹'+eq(n,d)+'›');const rows=[[rel,''],['Plane',eq(n,d)],['Normal n',fv(n)],['Distance from origin',fx(Math.abs(d)/n.length())]];
+ if(Math.abs(s.t)>1e-6){const d2=d+s.t*n.length();o.pl(n,d2,P,.15,26,'Π′: ‹'+eq(n,d2)+'›');o.dim(n.clone().multiplyScalar(d/n.lengthSq()),n.clone().multiplyScalar(d2/n.lengthSq()),'dist='+fx(Math.abs(s.t)),P);rows.push(['Parallel plane',eq(n,d2)],['Distance between planes',fx(Math.abs(s.t))]);}return rows;});
+
+mod('Planes','pair','Two planes: angle · parallel · ⊥ plane',
+'cosθ = n₁·n₂ / (|n₁||n₂|)\nParallel: a₁/a₂=b₁/b₂=c₁/c₂≠d₁/d₂ · Identical: all four equal\nPerpendicular: a₁a₂+b₁b₂+c₁c₂ = 0\nDistance between parallel planes = |d₁−d₂|/√(a²+b²+c²)\nPlane ⊥ to both: n = n₁×n₂',
+[v3('m','n₁',2,-2,1),['d1','d₁',-20,20,.1,0],v3('n','n₂',1,-1,2),['d2','d₂',-20,20,.1,4],v3('q','Q (plane 3 through)',1,-2,1),v3('r','P (measure from plane 3)',1,2,2)],
+{'Adv 2006: plane ⊥ both, through (1,−2,1); distance of (1,2,2) = 2√2':{},'Adv 2017: through (1,1,1) ⊥ 2x+y−2z=5, 3x−6y−2z=7':{mx:2,my:1,mz:-2,d1:5,nx:3,ny:-6,nz:-2,d2:7,qx:1,qy:1,qz:1},'Parallel planes':{mx:1,my:2,mz:2,d1:3,nx:2,ny:4,nz:4,d2:12},'Perpendicular planes':{mx:1,my:2,mz:0,d1:2,nx:-2,ny:1,nz:0,d2:1}},
+(s,o)=>{const n1=gv(s,'m'),n2=gv(s,'n'),q=gv(s,'q'),pp=gv(s,'r'),{d1,d2}=s;if(zero(n1)||zero(n2))return ERR('normal cannot be zero');o.pl(n1,d1,R,.18,26,'Π₁: ‹'+eq(n1,d1)+'›');o.pl(n2,d2,B,.18,26,'Π₂: ‹'+eq(n2,d2)+'›');
+ const n3=X(n1,n2),cs=n1.dot(n2)/(n1.length()*n2.length()),rows=[['Plane 1',eq(n1,d1)],['Plane 2',eq(n2,d2)],['cosθ, θ',fx(cs)+', '+fx(Math.acos(Math.abs(cs))*RAD)+'° (acute)']];
+ if(zero(n3)){const sg=Math.sign(cs),ds=Math.abs(d1/n1.length()-sg*d2/n2.length());o.dim(n1.clone().multiplyScalar(d1/n1.lengthSq()),n2.clone().multiplyScalar(d2/n2.lengthSq()),'dist='+fx(ds),W);rows.push([ds<1e-6?'✓ Identical planes':'✓ Parallel planes','']);rows.push(['Distance between planes',fx(ds)]);return rows;}
+ rows.push(Math.abs(cs)<1e-9?['✓ Perpendicular','n₁·n₂ = 0']:['Planes intersect','']);
+ const p0=n2.clone().cross(n3).multiplyScalar(d1).add(n3.clone().cross(n1).multiplyScalar(d2)).divideScalar(n1.dot(X(n2,n3)));o.ln(p0,n3,Y,.05);o.tx('L = Π₁∩Π₂',p0.clone().addScaledVector(n3.clone().normalize(),4),Y);
+ const d3=n3.dot(q);o.pl(n3,d3,N,.2,26,'Π₃: ‹'+eq(n3,d3)+'›');o.pt(q,O,'Q');o.pt(pp,P,'P');const t=(n3.dot(pp)-d3)/n3.lengthSq(),ft3=pp.clone().addScaledVector(n3,-t);o.seg(pp,ft3,W,1);o.dim(pp,ft3,'d='+fx(pp.distanceTo(ft3)),W);
+ rows.push(['Line of intersection',`point ${fv(p0)}, direction ${fv(n3)}`],['Plane 3 ⊥ both, n₁×n₂',fv(n3)],['Plane 3 through Q',eq(n3,d3)],['Distance of P from plane 3',fx(Math.abs(n3.dot(pp)-d3)/n3.length())]);return rows;});
+
+mod('Planes','lp','Line meets plane · ratio · angle · line in plane',
+'Take general point on line, substitute in plane → λ\nSegment AB cut by plane: AP : PB = t : (1−t)\nsinφ = |b·n| / (|b||n|)\nLine lies in plane ⇔ n·b = 0 and n·a = d\nLine ∥ plane ⇔ n·b = 0',
+[v3('a','A (on line)',3,5,-7),v3('b','B (2nd point)',-2,1,8),v3('n','n',1,0,0),['d','d',-30,30,.1,0]],
+{'Notes: yz-plane (x=0) divides (3,5,−7),(−2,1,8) as 3:2':{},'Notes: (x−1)/4=(y−2)/1=(z−1)/−3 meets 3x−y+2z=13 at (9,4,−5)':{ax:1,ay:2,az:1,bx:5,by:3,bz:-2,nx:3,ny:-1,nz:2,d:13},'Adv 2016: line lies in plane lx+my−z=9 (l=1, m=−1)':{ax:3,ay:-2,az:-4,bx:5,by:-3,bz:-1,nx:1,ny:-1,nz:-1,d:9},'Adv 2016: line (x−2)/3=(y−1)/−5=(z+2)/2 in x+3y−αz+β=0 → (α,β) = (−6, 7)':{ax:2,ay:1,az:-2,bx:5,by:-4,bz:0,nx:1,ny:3,nz:6,d:-7}},
+(s,o)=>{const A=gv(s,'a'),b=gv(s,'b'),n=gv(s,'n'),d=s.d,dir=b.clone().sub(A);if(zero(n)||zero(dir))return ERR('normal / direction cannot be zero');
+ o.pl(n,d,N,.2,26,'Π: ‹'+eq(n,d)+'›');o.ln(A,dir,Y);o.pt(A,R,'A');o.pt(b,B,'B');o.tx('L: r=A+λ(B−A)',A.clone().addScaledVector(dir.clone().normalize(),-4),Y);const nd=n.dot(dir),sn=Math.abs(nd)/(n.length()*dir.length()),ph=Math.asin(Math.min(1,sn))*RAD;
+ if(Math.abs(nd)<1e-9){const inn=Math.abs(n.dot(A)-d)<1e-6;return[['Plane',eq(n,d)],[inn?'✓ Line lies in the plane':'Line ∥ plane (no intersection)',inn?'n·b = 0 and n·a = d':'distance '+fx(Math.abs(n.dot(A)-d)/n.length())]];}
+ const t=(d-n.dot(A))/nd,q=A.clone().addScaledVector(dir,t);o.pt(q,O,'Q',.3);o.tx('AP:PB='+fx(Math.abs(t))+':'+fx(Math.abs(1-t))+'  φ='+fx(ph)+'°',q.clone().add(V(0,1.3,0)),O);
+ return[['Plane',eq(n,d)],['λ in A + λ(B−A)',fx(t)],['Point of intersection',fv(q)],[(t>=0&&t<=1?'Internal':'External')+' ratio AP : PB',fx(Math.abs(t))+' : '+fx(Math.abs(1-t))],['Angle with plane φ',fx(ph)+'°'],['Angle with normal',fx(90-ph)+'°']];});
+
+mod('Planes','pq','PQ parallel to a plane (Adv 2009)',
+'P(3,2,6) · Q on r = (i−j+2k)+μ(−3i+j+5k)\nPlane x−4y+3z = 1, n = (1,−4,3)\nQ = (1−3μ, −1+μ, 2+5μ)\nPQ ∥ plane ⇔ PQ·n = 0 ⇒ μ = 1/4',
+[v3('p','P',3,2,6),['u','μ',-2,2,.01,1]],{'μ = 1/4 → PQ ∥ plane':{u:.25}},
+(s,o)=>{const p=gv(s,'p'),u=s.u,q=V(1-3*u,-1+u,2+5*u),n=V(1,-4,3),pq=q.clone().sub(p),dt=pq.dot(n);o.pl(n,1,N,.2,26,'Π: ‹x−4y+3z = 1›');o.ln(V(1,-1,2),V(-3,1,5),Y);o.pt(p,R,'P');o.pt(q,O,'Q',.28);o.arr(p,pq,B,'PQ');o.arr(p,n.clone().normalize().multiplyScalar(3),P,'n',n.clone().normalize());o.tx('PQ·n='+fx(dt)+(Math.abs(dt)<.02?'  ∥':''),p.clone().add(q).multiplyScalar(.5).add(V(0,1.3,0)),B);
+ return[['Q(μ)',fv(q)],['PQ',fv(pq)],[Math.abs(dt)<.02?'✓ PQ·n ≈ 0 → PQ ∥ plane':'PQ·n',fx(dt)],['Solution','μ = 1/4']];});
+
+mod('Planes','mir','Mirror image plane (Adv 2020)',
+'Plane = perpendicular bisector of PP′\nn = P′ − P, passes through midpoint M\nαx+βy+γz = δ with α+γ = 1\nChecks: (A) α+β=2 (B) δ−γ=3 (C) δ+β=4 (D) α+β+γ=8',
+[v3('p','P',1,0,-1),v3('q','P′',3,2,-1)],{'Adv 2020: P(1,0,−1), P′(3,2,−1)':{}},
+(s,o)=>{const p=gv(s,'p'),q=gv(s,'q'),n=q.clone().sub(p);if(zero(n))return ERR('P and P′ coincide');const m=p.clone().add(q).multiplyScalar(.5),d=n.dot(m);o.pl(n,d,N,.2,26,'Π: ‹'+eq(n,d)+'›');o.pt(p,R,'P');o.pt(q,B,'P′');o.pt(m,Y,'M');o.seg(p,q,W,1);o.dim(p,m,'|PP′|='+fx(n.length()),W);
+ const rows=[['Midpoint M',fv(m)],['Plane  n·r = n·M',eq(n,d)]],k=Math.abs(n.x+n.z)>1e-9?1/(n.x+n.z):null;
+ if(k){const al=n.x*k,be=n.y*k,ga=n.z*k,de=d*k,ck=(l,v,t)=>[(Math.abs(v-t)<1e-6?'✓ ':'✗ ')+l,fx(v)];rows.push(['(α, β, γ, δ) with α+γ=1',`${fx(al)}, ${fx(be)}, ${fx(ga)}, ${fx(de)}`],ck('(A) α+β = 2',al+be,2),ck('(B) δ−γ = 3',de-ga,3),ck('(C) δ+β = 4',de+be,4),ck('(D) α+β+γ = 8',al+be+ga,8));}return rows;});
+
+mod('Problems','tri','Triangle: bisector, median, centroid, orthocentre',
+'Bisector from A meets BC at D: BD/DC = AB/AC\nCentroid G = (A+B+C)/3 · Equilateral: H = G\nDCs of AD: AD / |AD|\nl₁²+l₂²+l₃² = squared ⊥ distances from G to the sides',
+[v3('a','A',0,0,0),v3('b','B',2,2,1),v3('c','C',2,4,4)],
+{'Notes: O(0,0,0), A(2,2,1), B(2,4,4) → bisector foot (2, 8/3, 2)':{},'Notes: isosceles A(2,−3,3), B(2,2,3), C(−1,1,3): 2l² = 45':{ax:2,ay:-3,az:3,bx:2,by:2,bz:3,cx:-1,cy:1,cz:3},'Notes: equilateral (2,2,1),(1,2,2),(2,1,2): Σl² = 1/2':{ax:2,ay:2,az:1,bx:1,by:2,bz:2,cx:2,cy:1,cz:2},'Notes 2016: A(2,3,5), B(−1,3,2), C(7,5,10): AD equally inclined':{ax:2,ay:3,az:5,bx:-1,by:3,bz:2,cx:7,cy:5,cz:10}},
+(s,o)=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),ab=a.distanceTo(b),ac=a.distanceTo(c),bc=b.distanceTo(c);if(zero(X(b.clone().sub(a),c.clone().sub(a))))return ERR('points are collinear');
+ const g=a.clone().add(b).add(c).divideScalar(3),u=b.clone().sub(a),v=c.clone().sub(a),w=X(u,v),cc=a.clone().add(X(v,w).multiplyScalar(u.lengthSq()).add(X(w,u).multiplyScalar(v.lengthSq())).divideScalar(2*w.lengthSq())),h=a.clone().add(b).add(c).sub(cc.clone().multiplyScalar(2));
+ const dd=b.clone().multiplyScalar(ac).add(c.clone().multiplyScalar(ab)).divideScalar(ab+ac),mid=b.clone().add(c).multiplyScalar(.5),ft=(p,q,r)=>{const d=r.clone().sub(q);return q.clone().addScaledVector(d,p.clone().sub(q).dot(d)/d.lengthSq());};
+ [[a,b],[b,c],[c,a]].forEach(([p,q])=>o.seg(p,q,W));o.pt(a,R,'A');o.pt(b,B,'B');o.pt(c,P,'C');o.seg(a,dd,Y,0,.06);o.pt(dd,Y,'D');o.seg(a,mid,O,1);o.pt(g,O,'G');o.pt(h,N,'H');
+ const fs=[[g,a,b],[g,b,c],[g,c,a]].map(([p,q,r])=>{const f=ft(p,q,r);o.seg(p,f,N,1);return p.distanceTo(f);});const ad=dd.clone().sub(a),am=mid.clone().sub(a),af=ft(a,b,c);
+ o.dim(a,b,'c=AB='+fx(ab),W);o.dim(b,c,'a=BC='+fx(bc),W);o.dim(c,a,'b=CA='+fx(ac),W);o.dim(a,dd,'AD='+fx(ad.length()),Y);o.dim(a,mid,'AM='+fx(am.length()),O);return[['Sides AB, BC, CA',`${fx(ab)}, ${fx(bc)}, ${fx(ac)}`],['Bisector foot D (BD:DC = AB:AC)',fv(dd)],['|AD|, |AD|²',`${fx(ad.length())}, ${fx(ad.lengthSq())}`],['Median foot M, |AM|',`${fv(mid)}, ${fx(am.length())}`],['DCs of AM',fv(am.clone().normalize())],['Altitude |AF|',fx(a.distanceTo(af))],['Centroid G',fv(g)],['Orthocentre H',fv(h)],['Circumcentre',fv(cc)],['⊥ distances from G to sides',fs.map(fx).join(', ')],['Σ squares',fx(fs.reduce((t,x)=>t+x*x,0))]];});
+
+mod('Problems','vs','Marks App: a = λ(b + c)',
+'b = (i+j)/√2 , c = (j+k)/√2\na = λ(b+c) = λ(i + 2j + k)/√2\nMatch αi + 2j + βk ⇒ λ = √2, α = β = 1',
+[['l','λ',0,4,.01,1.41]],{'λ = √2 → α = β = 1':{l:1.4142}},
+(s,o)=>{const u=V(1,1,0).divideScalar(sq(2)),v=V(0,1,1).divideScalar(sq(2)),z0=V(0,0,0),a=u.clone().add(v).multiplyScalar(s.l);o.arr(z0,u,R,'b');o.arr(z0,v,B,'c');o.seg(u,u.clone().add(v),W,1);o.seg(v,u.clone().add(v),W,1);o.arr(z0,a,N,'a=λ(b+c)');
+ return[['a = λ(b+c)',fv(a)],['α (i-component)',fx(a.x)],['y-component (needs 2)',fx(a.y)],['β (k-component)',fx(a.z)],Math.abs(a.y-2)<.02?['✓ matches αi+2j+βk',`α = ${fx(a.x)}, β = ${fx(a.z)}`]:['Adjust λ until y = 2','λ = √2']];});
+
+/* ---------- UI ---------- */
+
+/* ---------- physics mode: animated 3D real-world graphics for every demonstration ---------- */
+scene.add(new THREE.AmbientLight(0xffffff,.75));{const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(6,12,8);scene.add(dl);}
+const PHYS={m:1,i:1,v:1,ms:1};const PG=new THREE.Group(),PU=[],PH={on:0,pause:0,hide:0};let PT=0;scene.add(PG);PG.visible=false;
+const MP=V(-9,0,9),frac=x=>x-Math.floor(x),clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+function pclr(){PU.length=0;while(PG.children.length){const c=PG.children[0];PG.remove(c);c.traverse(m=>{m.geometry&&m.geometry.dispose();if(m.material)(Array.isArray(m.material)?m.material:[m.material]).forEach(x=>x.dispose());});}}
+const lam=(c,op)=>new THREE.MeshLambertMaterial({color:c,transparent:op!==undefined,opacity:op===undefined?1:op,side:2});
+const gl=(c,op=.5)=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:Math.min(1,op*PHYS.i),blending:THREE.AdditiveBlending,depthWrite:false});
+const orient=(m,d)=>{m.quaternion.setFromUnitVectors(V(0,1,0),d.clone().normalize());return m;};
+const put=(m,p)=>{if(p)m.position.copy(p);PG.add(m);return m;};
+const ball=(p,c,r=.3,op)=>put(new THREE.Mesh(new THREE.SphereGeometry(r*PHYS.ms,20,14),lam(c,op)),p);
+function bar(a,b,c,r=.07,mat){const d=b.clone().sub(a),L=d.length();if(L<1e-6)return null;const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,10),mat||lam(c));m.position.copy(a).add(b).multiplyScalar(.5);orient(m,d);PG.add(m);return m;}
+function parr(a,v,c,r=.08){const L=v.length();if(L<1e-6)return null;const g=new THREE.Group(),h=Math.min(.7,L*.4),sh=Math.max(L-h,.01),s=new THREE.Mesh(new THREE.CylinderGeometry(r,r,sh,10),lam(c)),k=new THREE.Mesh(new THREE.ConeGeometry(r*2.6,h,14),lam(c));s.position.y=sh/2;k.position.y=sh+h/2;g.add(s,k);g.position.copy(a);orient(g,v);PG.add(g);return g;}
+function trail(c,n=40){const pos=new Float32Array(n*3),g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.85}));l.frustumCulled=false;PG.add(l);
+ return(p,reset)=>{if(reset)for(let i=0;i<n;i++)pos.set([p.x,p.y,p.z],i*3);pos.copyWithin(0,3);pos.set([p.x,p.y,p.z],(n-1)*3);g.attributes.position.needsUpdate=true;};}
+function dline(c,op=.85){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:op}));l.frustumCulled=false;PG.add(l);return(a,b)=>{g.attributes.position.array.set([a.x,a.y,a.z,b.x,b.y,b.z]);g.attributes.position.needsUpdate=true;};}
+function dashed(a,b,c){const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),new THREE.LineDashedMaterial({color:c,dashSize:.25,gapSize:.18}));l.computeLineDistances();PG.add(l);return l;}
+function sym(p,plus,c='#ffffff',s=.3){const g=new THREE.Group(),m=new THREE.MeshBasicMaterial({color:c,depthTest:false,transparent:true}),h=new THREE.Mesh(new THREE.BoxGeometry(s*2,s*.5,.02),m);g.add(h);if(plus)g.add(new THREE.Mesh(new THREE.BoxGeometry(s*.5,s*2,.02),m));g.renderOrder=10;g.children.forEach(x=>x.renderOrder=10);g.position.copy(p);PG.add(g);PU.push(()=>g.quaternion.copy(camera.quaternion));return g;}
+function charge(p,pos,r=.3,op){ball(p,pos?R:B,r,op);sym(p,pos);}
+function sheet(nh,pos,c,op,size=16){const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:op,side:2,depthWrite:false}));m.quaternion.setFromUnitVectors(V(0,0,1),nh);m.position.copy(pos);PG.add(m);return m;}
+function tri(a,b,c,col,op){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([...a.toArray(),...b.toArray(),...c.toArray()]),3));g.computeVertexNormals();return put(new THREE.Mesh(g,lam(col,op)));}
+function meter(p,val,mx,label){const H=4,t=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,H,16,1,true),new THREE.MeshBasicMaterial({color:'#9fb4cc',transparent:true,opacity:.22,side:2,depthWrite:false}));t.position.copy(p).add(V(0,H/2,0));PG.add(t);
+ put(new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.12,16),lam('#445468')),p);const f=clamp(Math.abs(val)/mx,0,1),h=Math.max(.06,H*f);
+ const fl=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,h,16),new THREE.MeshBasicMaterial({color:Math.abs(val)<1e-6?'#93a4b8':val>0?N:R}));fl.position.copy(p).add(V(0,.06+h/2,0));PG.add(fl);
+ PU.push(t=>{fl.material.opacity=1;fl.scale.x=fl.scale.z=1+.08*Math.sin(t*5);});}
+function drone(c){const g=new THREE.Group(),m=lam(c),dk=lam('#2a3646');g.add(new THREE.Mesh(new THREE.SphereGeometry(.28,14,10),m));
+ [Math.PI/4,-Math.PI/4].forEach(a=>{const arm=new THREE.Mesh(new THREE.BoxGeometry(1.2,.06,.07),dk);arm.rotation.y=a;g.add(arm);});
+ const rot=[];[[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([i,j])=>{const r=new THREE.Group(),d=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.015,18),new THREE.MeshBasicMaterial({color:'#bcd',transparent:true,opacity:.22})),bl=new THREE.Mesh(new THREE.BoxGeometry(.6,.02,.06),dk);r.add(d,bl);r.position.set(i*.42,.1,j*.42);g.add(r);rot.push(r);});
+ PU.push(t=>rot.forEach((r,i)=>r.rotation.y=t*40*(i%2?1:-1)));PG.add(g);return g;}
+function jet(c){const g=new THREE.Group(),m=lam(c),h=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,1.4,10),m),nose=new THREE.Mesh(new THREE.ConeGeometry(.14,.5,10),m),wing=new THREE.Mesh(new THREE.BoxGeometry(1.7,.05,.5),m),tail=new THREE.Mesh(new THREE.BoxGeometry(.6,.05,.25),m),fin=new THREE.Mesh(new THREE.BoxGeometry(.05,.3,.3),m);
+ nose.position.y=.95;wing.position.y=-.1;tail.position.y=-.62;fin.position.set(0,-.62,.17);fin.rotation.x=0;h.add(body,nose,wing,tail,fin);g.add(h);PG.add(g);return g;}
+function boat(c){const g=new THREE.Group(),m=lam(c),bd=new THREE.Mesh(new THREE.BoxGeometry(.55,1.4,.35),m),bw=new THREE.Mesh(new THREE.ConeGeometry(.28,.7,4),m);bw.position.y=1.05;bw.rotation.y=Math.PI/4;g.add(bd,bw);return g;}
+function dish(p,d,c='#c9d3df'){const g=new THREE.Group(),m=lam(c);const base=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,.5,12),m),cone=new THREE.Mesh(new THREE.ConeGeometry(.55,.5,16,1,true),m);cone.position.y=.45;cone.rotation.x=Math.PI;g.add(base,cone);orient(g,d);g.position.copy(p);PG.add(g);return g;}
+function atom(p,c='#9fb4cc',r=.2){const m=ball(p,c,r),b=p.clone(),ph=Math.random()*6;PU.push(t=>m.position.set(b.x+.05*Math.sin(t*7+ph),b.y+.05*Math.sin(t*6+ph*2),b.z+.05*Math.cos(t*8+ph)));return m;}
+function ring(c,cen,r,nrm,w=.04){const m=new THREE.Mesh(new THREE.TorusGeometry(r,w,8,72),gl(c,.7));m.quaternion.setFromUnitVectors(V(0,0,1),nrm.clone().normalize());m.position.copy(cen);PG.add(m);return m;}
+function tangent(nh){let t=X(nh,V(0,1,0));if(t.lengthSq()<1e-6)t=X(nh,V(1,0,0));return t.normalize();}
+function arc(a,b,c,r=1.6){const pts=[],an=Math.acos(clamp(a.dot(b),-1,1));if(an<1e-3)return;const ax=X(a,b).normalize();for(let i=0;i<=20;i++)pts.push(a.clone().applyAxisAngle(ax,an*i/20).multiplyScalar(r));return pts;}
+
+/* mirror / image scene: object, virtual image, eye, bouncing ray (used by plane + mir) */
+function mirrorGfx(pp,im,nh,dd,chg){chg?(charge(pp,1,.32),charge(im,0,.32,.55)):(ball(pp,Y,.32),ball(im,Y,.32,.4));
+ const td=tangent(nh).multiplyScalar(5),E=pp.clone().add(td),den=nh.dot(im.clone().sub(E));if(Math.abs(den)<1e-9)return;const sp=(dd-nh.dot(E))/den;if(sp<=0||sp>=1)return;
+ const Rr=E.clone().add(im.clone().sub(E).multiplyScalar(sp));bar(pp,Rr,Y,.035,gl(Y,.8));bar(Rr,E,Y,.035,gl(Y,.8));dashed(Rr,im,'#ffffff');
+ ball(E,'#ffffff',.3);ball(E.clone().add(Rr.clone().sub(E).normalize().multiplyScalar(.22)),'#101820',.13);
+ const ph=ball(pp,'#fff7c0',.14),l1=pp.distanceTo(Rr),l2=Rr.distanceTo(E),tot=l1+l2;
+ PU.push(t=>{const d=frac(t*.35)*tot;if(d<l1)ph.position.copy(pp).lerp(Rr,d/l1);else ph.position.copy(Rr).lerp(E,(d-l1)/l2);});}
+
+/* force on a sliding block: work meter + torque wheel (used by ang + perp) */
+function forceWork(F,d){if(zero(F)||zero(d))return;const dh=d.clone().normalize(),W_=F.dot(d),cr=X(F,d),Z=V(0,0,0);
+ bar(Z,d,'#c9d3df',.03,gl('#c9d3df',.5));const g=new THREE.Group(),bx=new THREE.Mesh(new THREE.BoxGeometry(.9,.6,.9),lam(O));g.add(bx);
+ const ar=parr(V(0,0,0),F.clone().normalize().multiplyScalar(2.6),R,.07);g.add(ar);PG.add(g);const tr=trail(O);
+ PU.push(t=>{const k=.5-.5*Math.cos(t*1.3);g.position.copy(dh).multiplyScalar(k*d.length());tr(g.position,t<.05);});
+ meter(MP,W_,F.length()*d.length());
+ if(!zero(cr)){ring(P,V(0,0,0),1.6,cr,.06);const spokes=new THREE.Group();[0,1,2,3].forEach(i=>{const sk=new THREE.Mesh(new THREE.BoxGeometry(3.1,.07,.07),gl(P,.6));sk.rotation.z=i*Math.PI/4;spokes.add(sk);});spokes.quaternion.setFromUnitVectors(V(0,0,1),cr.clone().normalize());PG.add(spokes);
+  const w0=spokes.quaternion.clone(),axq=new THREE.Quaternion(),crn=cr.clone().normalize(),rate=clamp(cr.length()*.15,.6,5);PU.push(t=>{axq.setFromAxisAngle(crn,t*rate);spokes.quaternion.copy(axq).multiply(w0);});}}
+
+/* lasers (used by copk) */
+function lasers(a1,b1,a2,b2){const k=skew(a1,b1,a2,b2);[[a1,b1,R],[a2,b2,B]].forEach(([a,b,c])=>{const u=b.clone().normalize(),st=a.clone().addScaledVector(u,-9),en=a.clone().addScaledVector(u,13);
+  const em=new THREE.Mesh(new THREE.BoxGeometry(.55,.9,.55),lam('#3a4a60'));em.position.copy(st);orient(em,u);PG.add(em);bar(st,en,c,.05,gl(c,.45));
+  [0,1,2].forEach(i=>{const ph=ball(st,'#ffffff',.16);PU.push(t=>ph.position.copy(st).lerp(en,frac(t*.35+i/3)));});});
+ if(!k.par&&k.p1){if(k.sd<1e-3){const f=ball(k.p1,Y,.4,.6);PU.push(t=>f.scale.setScalar(1+.35*Math.sin(t*8)));}else{const u=dline(Y);PU.push(t=>u(k.p1,k.p2));ball(k.p1,'#ffffff',.15);ball(k.p2,'#ffffff',.15);}}}
+
+const PX={};
+PX.coord=s=>{const p=gv(s,'p');if(zero(p))return;const F=[[V(p.x,p.y,0),B,V(0,0,1)],[V(0,p.y,p.z),R,V(1,0,0)],[V(p.x,0,p.z),N,V(0,1,0)]];
+ F.forEach(([f,c,nn])=>{const m=new THREE.Mesh(new THREE.CircleGeometry(.75,24),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.6,side:2,depthWrite:false}));m.quaternion.setFromUnitVectors(V(0,0,1),nn);m.position.copy(f);PG.add(m);bar(p,f,c,.03,gl(c,.55));});
+ const dr=drone(Y);dr.position.copy(p);PU.push(t=>dr.position.y=p.y+.12*Math.sin(t*2.2));
+ const rr=p.length(),sp=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:Y,wireframe:true,transparent:true,opacity:.4}));PG.add(sp);
+ dish(V(0,-.25,0),V(p.x,p.y+.25,p.z));const ping=ball(V(0,0,0),'#fff7c0',.16);PU.push(t=>{const u=frac(t*.35);sp.scale.setScalar(Math.max(.01,u*rr));sp.material.opacity=.45*(1-u);ping.position.copy(p).multiplyScalar(u);});};
+PX.section=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),{m,n}=s,e=s.ex=='External',den=e?m-n:m+n,w=x=>.22+.13*Math.cbrt(Math.max(x,.05));
+ bar(a,b,'#c9d3df',.09);ball(a,R,w(n));ball(b,B,w(m));tri(a,b,c,P,.28);ball(c,P,w(1));
+ [[a,b],[b,c],[c,a]].forEach(([u,v])=>bar(u,v,P,.035,gl(P,.6)));
+ if(Math.abs(den)>1e-9){const bm=b.clone().multiplyScalar(m),an=a.clone().multiplyScalar(n),p=(e?bm.sub(an):bm.add(an)).divideScalar(den);
+  const co=new THREE.Mesh(new THREE.ConeGeometry(.55,1.3,16),lam(N));co.position.copy(p).add(V(0,-.65,0));PG.add(co);if(e){const nr=p.distanceTo(a)<p.distanceTo(b)?a:b;bar(p,nr,'#c9d3df',.09);}
+  const h=ball(p,N,.3,.6);PU.push(t=>h.scale.setScalar(1+.25*Math.sin(t*4)));}
+ const g=a.clone().add(b).add(c).divideScalar(3),nrm=X(b.clone().sub(a),c.clone().sub(a)).normalize();if(nrm.lengthSq()>.5){const pin=new THREE.Mesh(new THREE.ConeGeometry(.4,1.1,14),lam(O));orient(pin,nrm);pin.position.copy(g).addScaledVector(nrm,-.55);PG.add(pin);}
+ const hg=ball(g,O,.28,.7);PU.push(t=>hg.scale.setScalar(1+.25*Math.sin(t*4+1)));};
+PX.dc=s=>{const v=gv(s,'d');if(zero(v))return;const u=v.clone().normalize(),cone=new THREE.Mesh(new THREE.ConeGeometry(2.4,13,28,1,true),gl(Y,.13));cone.geometry.translate(0,-6.5,0);orient(cone,u.clone().negate());PG.add(cone);
+ parr(V(0,0,0),V(u.x*5,0,0),R,.1);parr(V(0,0,0),V(0,u.y*5,0),N,.1);parr(V(0,0,0),V(0,0,u.z*5),B,.1);
+ const pr=new THREE.Group(),bd=new THREE.Mesh(new THREE.ConeGeometry(.22,.9,12),lam(Y));orient(bd,u);pr.add(bd);PG.add(pr);const tr=trail(Y,50);PU.push(t=>{const k=frac(t*.22);pr.position.copy(u).multiplyScalar(k*14);tr(pr.position,k<.02);});};
+PX.ang=s=>{forceWork(gv(s,'u'),gv(s,'w'));};
+PX.perp=s=>{forceWork(V(5*s.l+2,-5,1),V(1,2*s.l,3));};
+PX.cop=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),t=a.dot(X(b,c)),geo=new THREE.BoxGeometry(1,1,1);geo.translate(.5,.5,.5);geo.applyMatrix4(new THREE.Matrix4().makeBasis(a,b,c));
+ const col=Math.abs(t)<1e-6?O:P;put(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.2,side:2,depthWrite:false})));put(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:col})));
+ for(let i=0;i<2;i++)for(let j=0;j<2;j++)for(let k=0;k<2;k++)atom(a.clone().multiplyScalar(i).addScaledVector(b,j).addScaledVector(c,k),'#9fb4cc',.24);
+ meter(MP,Math.abs(t),60);};
+PX.line=s=>{const p=gv(s,'p'),q=gv(s,'q'),b=q.clone().sub(p);if(zero(b))return;const u=b.clone().normalize(),g=new THREE.Group();g.add(new THREE.Mesh(new THREE.SphereGeometry(.32,18,12),lam(Y)));g.add(parr(V(0,0,0),u.clone().multiplyScalar(1.7),O,.05));PG.add(g);
+ const tr=trail(Y,50),ln=dline('#ffffff',.7);dish(V(0,-.3,0),V(0,1,0));const r0=p.clone().addScaledVector(b,s.t);ball(r0,N,.2,.6);
+ PU.push(t=>{const k=frac(t*.1);g.position.copy(p).addScaledVector(b,-1+k*3);tr(g.position,k<.02);ln(V(0,0,0),g.position);});};
+PX.two=s=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');if(zero(b1)||zero(b2))return;const kk=skew(a1,b1,a2,b2),u1=b1.clone().normalize(),u2=b2.clone().normalize();
+ let c1,c2;if(kk.par){c1=a1.clone();c2=a2.clone().addScaledVector(b2,a1.clone().sub(a2).dot(b2)/b2.lengthSq());}else{c1=kk.p1;c2=kk.p2;}
+ const j1=jet(R),j2=jet(B);orient(j1,u1);orient(j2,u2);const t1=trail(R,40),t2=trail(B,40),sep=dline(Y);
+ if(kk.sd>.05){ball(c1,R,kk.sd/2,.16);ball(c2,B,kk.sd/2,.16);}
+ const fl=ball(c1,Y,.5,.5);fl.visible=false;
+ PU.push(t=>{const k=frac(t*.1),x=(k*2-1)*11;j1.position.copy(c1).addScaledVector(u1,x);j2.position.copy(c2).addScaledVector(u2,x);t1(j1.position,k<.02);t2(j2.position,k<.02);sep(j1.position,j2.position);
+  if(kk.sd<1e-3){const near=Math.abs(x)<1.2;fl.visible=near;fl.scale.setScalar(1+3*(1-Math.abs(x)/1.2)*(near?1:0));}});};
+PX.copk=s=>{const k=s.k;lasers(V(2,3,4),V(1,1,-k),V(1,4,5),V(k,2,1));};
+PX.foot=s=>{const p=gv(s,'p'),a=gv(s,'a'),b=gv(s,'b');if(zero(b))return;const bh=b.clone().normalize(),l=p.clone().sub(a).dot(b)/b.lengthSq(),q=a.clone().addScaledVector(b,l),im=q.clone().multiplyScalar(2).sub(p),d=p.distanceTo(q);
+ bar(a.clone().addScaledVector(bh,-16),a.clone().addScaledVector(bh,16),'#c87533',.17);
+ for(let i=0;i<9;i++){const e=ball(a,'#7fd0ff',.1);PU.push(t=>e.position.copy(a).addScaledVector(bh,frac(t*.2+i/9)*32-16).add(V(.0,.0,0)));}
+ parr(q.clone().addScaledVector(bh,-1.2),bh.clone().multiplyScalar(2.4),Y,.07);
+ if(d>1e-6){const e1=p.clone().sub(q).normalize(),e2=X(bh,e1).normalize();ring(Y,q,d,bh,.035);
+  [0,1,2].forEach(i=>{const m=ball(q,'#ffffff',.14);PU.push(t=>m.position.copy(q).addScaledVector(e1,d*Math.cos(t*1.1+i*2.094)).addScaledVector(e2,d*Math.sin(t*1.1+i*2.094)));});
+  const nd=new THREE.Group(),n1=new THREE.Mesh(new THREE.ConeGeometry(.16,.8,10),lam(R)),n2=new THREE.Mesh(new THREE.ConeGeometry(.16,.8,10),lam('#e8e4d8'));n1.position.y=.4;n2.position.y=-.4;n2.rotation.x=Math.PI;nd.add(n1,n2);orient(nd,e2);nd.position.copy(p);PG.add(nd);
+  ball(p,R,.22);ball(im,P,.22,.45);dline('#ffffff',.6)(p,im);bar(p,q,O,.03,gl(O,.7));}};
+PX.plane=s=>{const n=gv(s,'n'),d=s.d,pp=gv(s,'p'),L=n.length();if(L<1e-9)return;const nh=n.clone().divideScalar(L),t=(n.dot(pp)-d)/n.lengthSq(),im=pp.clone().addScaledVector(n,-2*t);mirrorGfx(pp,im,nh,d/L,true);};
+PX.build=s=>{const i=K.indexOf(s.kind),A=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),v=gv(s,'v'),ab=b.clone().sub(A);let n=i==0?X(ab,c.clone().sub(A)):i==2?X(ab,v):i==3?A.clone():v.clone();if(zero(n))return;
+ const d=i==4?s.p*n.length():n.dot(A),nh=n.clone().normalize(),dd=d/n.length(),W_=[];
+ for(let k=0;k<9;k++)W_.push(sheet(nh,V(0,0,0),Y,.1,18));PU.push(t=>W_.forEach((m,k)=>{const off=(k-4+frac(t*.35))*2.2;m.position.copy(nh).multiplyScalar(dd+off);m.material.opacity=.16*Math.max(0,1-Math.abs(off)/9);}));
+ parr(nh.clone().multiplyScalar(dd),nh.clone().multiplyScalar(3),Y,.08);
+ const g0=V(0,-1,0),gt=g0.clone().addScaledVector(nh,-g0.dot(nh));if(gt.length()>.08){const dir=gt.normalize(),top=nh.y>=0?1:-1,f0=nh.clone().multiplyScalar(dd),st=f0.clone().addScaledVector(dir,-6),grp=new THREE.Group();grp.add(new THREE.Mesh(new THREE.SphereGeometry(.45,18,12),lam(O)));
+  const mg=parr(V(0,0,0),V(0,-2.2,0),R,.06),nf=parr(V(0,0,0),nh.clone().multiplyScalar(top*2.2),N,.06);grp.add(mg,nf);PG.add(grp);const tr=trail(O,40);
+  PU.push(t=>{const k=frac(t*.18);grp.position.copy(st).addScaledVector(dir,12*k*k).addScaledVector(nh,top*.45);tr(grp.position,k<.02);});}};
+PX.pln=s=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');if(zero(b1)||zero(b2))return;const dp=a2.clone().sub(a1);let n=X(b1,b2);if(zero(n)){n=X(dp,b1);if(zero(n))return;}else if(Math.abs(dp.dot(n))>1e-6)return;
+ const nh=n.clone().normalize(),u=tangent(nh),w=X(nh,u).normalize(),c1=a1.clone();parr(c1,nh.clone().multiplyScalar(3),P,.09);
+ if(Math.abs(s.t)>1e-6){const c2=c1.clone().addScaledVector(nh,s.t);for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const o1=u.clone().multiplyScalar(i*2.4).addScaledVector(w,j*2.4);charge(c1.clone().add(o1),1,.14);charge(c2.clone().add(o1),0,.14);}
+  [0,1,2,3,4].forEach(k=>{const e=ball(c1,'#ffe08a',.12),o1=u.clone().multiplyScalar((k-2)*2.4).addScaledVector(w,((k*2)%5-2)*2.4);PU.push(t=>e.position.copy(c1).add(o1).addScaledVector(nh,s.t*frac(t*.3+k/5)));});}
+ else{ball(c1,Y,.55,.9);const pl=ball(c1,'#7fd0ff',.3),tr=trail('#7fd0ff',60);PU.push(t=>{pl.position.copy(c1).addScaledVector(u,4.5*Math.cos(t*.9)).addScaledVector(w,4.5*Math.sin(t*.9));tr(pl.position,t<.05);});}};
+PX.pair=s=>{const n1=gv(s,'m'),n2=gv(s,'n'),{d1,d2}=s;if(zero(n1)||zero(n2))return;const h1=n1.clone().normalize(),h2=n2.clone().normalize(),e1=d1/n1.length(),cs=h1.dot(h2),n3=X(n1,n2);let S0,D0;
+ if(zero(n3)){const e2=Math.sign(cs||1)*d2/n2.length();S0=h1.clone().multiplyScalar((e1+e2)/2);D0=h1.clone().multiplyScalar(.7).addScaledVector(tangent(h1),.7);}
+ else{const p0=n2.clone().cross(n3).multiplyScalar(d1).add(n3.clone().cross(n1).multiplyScalar(d2)).divideScalar(n1.dot(X(n2,n3)));S0=p0.clone().addScaledVector(h1.clone().add(h2),3);D0=h1.clone().multiplyScalar(-.6).addScaledVector(h2,-1.1).addScaledVector(n3.clone().normalize(),.6);}
+ D0.normalize();const P_=[S0.clone()];let Sx=S0.clone(),Dx=D0.clone();
+ for(let k=0;k<9;k++){let best=1e9,hn=null;[[h1,e1],[h2,Math.sign(cs||1)*d2/n2.length()]].forEach(([h,e])=>{const den=h.dot(Dx);if(Math.abs(den)<1e-9)return;const t=(e-h.dot(Sx))/den;if(t>1e-4&&t<best){best=t;hn=h;}});
+  if(!hn){P_.push(Sx.clone().addScaledVector(Dx,12));break;}Sx=Sx.clone().addScaledVector(Dx,best);P_.push(Sx.clone());Dx=Dx.clone().addScaledVector(hn,-2*Dx.dot(hn));}
+ const segs=[],tot=P_.reduce((t,p,i)=>{if(!i)return 0;const l=p.distanceTo(P_[i-1]);segs.push(l);return t+l;},0);if(tot<1e-6)return;
+ for(let i=1;i<P_.length;i++)bar(P_[i-1],P_[i],Y,.04,gl(Y,.8));ball(P_[0],'#7fd0ff',.2,.4);const ph=ball(P_[0],'#fff7c0',.2);
+ PU.push(t=>{let d=frac(t*.25)*tot,i=0;while(i<segs.length-1&&d>segs[i]){d-=segs[i];i++;}ph.position.copy(P_[i]).lerp(P_[i+1],clamp(d/segs[i],0,1));});};
+PX.lp=s=>{const A=gv(s,'a'),b=gv(s,'b'),n=gv(s,'n'),d=s.d,dir=b.clone().sub(A);if(zero(n)||zero(dir))return;const nh=n.clone().normalize(),dh=dir.clone().normalize(),nd=n.dot(dir);
+ if(Math.abs(nd)<1e-9){const ph=ball(A,'#fff7c0',.2);PU.push(t=>ph.position.copy(A).addScaledVector(dh,frac(t*.2)*20-8));return;}
+ const t0=(d-n.dot(A))/nd,q=A.clone().addScaledVector(dir,t0),nN=dh.dot(nh)<0?nh.clone():nh.clone().negate(),Sx=q.clone().addScaledVector(dh,-10),
+  Rf=dh.clone().addScaledVector(nN,-2*dh.dot(nN)),eta=1/1.5,ci=-dh.dot(nN),kk=1-eta*eta*(1-ci*ci),T=dh.clone().multiplyScalar(eta).addScaledVector(nN,eta*ci-Math.sqrt(Math.max(0,kk))),Re=q.clone().addScaledVector(Rf,10),Te=q.clone().addScaledVector(T.normalize(),10);
+ bar(Sx,q,Y,.045,gl(Y,.8));bar(q,Re,Y,.04,gl(Y,.7));bar(q,Te,O,.035,gl(O,.55));dashed(q.clone().addScaledVector(nN,-4),q.clone().addScaledVector(nN,4),'#ffffff');
+ const a1=arc(nN,dh.clone().negate(),Y,2),a2=arc(nN,Rf,Y,2);[a1,a2].forEach(pts=>{if(!pts)return;const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p=>p.add(q))),new THREE.LineBasicMaterial({color:'#ffffff'}));PG.add(l);});
+ ball(q,Y,.2);const pi=ball(Sx,'#fff7c0',.2),pr=ball(q,'#fff7c0',.18),pt=ball(q,O,.16);
+ PU.push(t=>{const k=frac(t*.3)*2;if(k<1){pi.visible=true;pr.visible=pt.visible=false;pi.position.copy(Sx).lerp(q,k);}else{pi.visible=false;pr.visible=pt.visible=true;pr.position.copy(q).lerp(Re,k-1);pt.position.copy(q).lerp(Te,k-1);}});};
+PX.pq=s=>{const p=gv(s,'p'),u=s.u,q=V(1-3*u,-1+u,2+5*u),n=V(1,-4,3),nh=n.clone().normalize(),pq=q.clone().sub(p),dt=pq.dot(n),u1=tangent(nh),w=X(nh,u1).normalize(),d0=1/n.length();
+ for(let k=-3;k<=3;k++)if(k)sheet(nh,nh.clone().multiplyScalar(d0+k*2.6),P,.07,18);
+ for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)parr(p.clone().addScaledVector(u1,i*4).addScaledVector(w,j*4).addScaledVector(nh,-1),nh.clone().multiplyScalar(2),P,.04);
+ bar(p,q,B,.035,gl(B,.8));ball(p,'#ffffff',.12);const g=new THREE.Group();g.add(new THREE.Mesh(new THREE.SphereGeometry(.3,18,12),lam(R)));PG.add(g);const sm=sym(V(0,0,0),1);g.add(sm);const tr=trail(R,40);
+ PU.push(t=>{const k=.5-.5*Math.cos(t*1.2);g.position.copy(p).lerp(q,k);tr(g.position,t<.05);});meter(MP,dt,40);};
+PX.mir=s=>{const p=gv(s,'p'),q=gv(s,'q'),n=q.clone().sub(p);if(zero(n))return;const m=p.clone().add(q).multiplyScalar(.5);mirrorGfx(p,q,n.clone().normalize(),n.clone().normalize().dot(m),false);};
+PX.tri=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c');if(zero(X(b.clone().sub(a),c.clone().sub(a))))return;const u=b.clone().sub(a),v=c.clone().sub(a),w=X(u,v),
+ cc=a.clone().add(X(v,w).multiplyScalar(u.lengthSq()).add(X(w,u).multiplyScalar(v.lengthSq())).divideScalar(2*w.lengthSq())),g=a.clone().add(b).add(c).divideScalar(3),Rc=cc.distanceTo(a),nrm=w.clone().normalize();
+ tri(a,b,c,P,.35);[a,b,c].forEach((p,i)=>ball(p,[R,B,P][i],.3));const pin=new THREE.Mesh(new THREE.ConeGeometry(.4,1.1,14),lam(O));orient(pin,nrm);pin.position.copy(g).addScaledVector(nrm,-.55);PG.add(pin);ball(g,O,.22);
+ const sp=[a,b,c].map((p,i)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:[R,B,P][i],wireframe:true,transparent:true,opacity:.35}));m.position.copy(p);PG.add(m);return m;});
+ const rc=ball(cc,'#ffffff',.25),hl=ball(cc,Y,.5,.0);hl.material.blending=THREE.AdditiveBlending;
+ PU.push(t=>{const k=frac(t*.25);sp.forEach(m=>{m.scale.setScalar(Math.max(.01,k*Rc));m.material.opacity=.4*(1-k*.6);});hl.material.opacity=k>.92?.7:0;rc.scale.setScalar(k>.92?1.6:1);});};
+PX.vs=s=>{const u=V(1,1,0).divideScalar(sq(2)),v=V(0,1,1).divideScalar(sq(2)),a=u.clone().add(v).multiplyScalar(s.l);
+ const ps=[];for(let i=0;i<30;i++){const m=ball(V(0,0,0),'#5ab0ff',.1,.7),ox=Math.sin(i*12.9)*6,oy=Math.sin(i*7.3+1)*6,oz=Math.sin(i*3.7+2)*6,ph=frac(i*.6180339);ps.push([m,ox,oy,oz,ph]);}
+ PU.push(t=>ps.forEach(([m,ox,oy,oz,ph])=>m.position.set(ox,oy,oz).addScaledVector(v,frac(t*.08+ph)*18-9)));
+ const g=new THREE.Group(),hull=boat('#e8e4d8');orient(hull,u);g.add(hull);const ab=parr(V(0,.0,0),u.clone().multiplyScalar(2.2),R,.06),cb=parr(V(0,0,0),v.clone().multiplyScalar(2.2),B,.06);g.add(ab,cb);PG.add(g);
+ if(a.length()>1e-6){const ah=a.clone().normalize();bar(ah.clone().multiplyScalar(-10),ah.clone().multiplyScalar(10),N,.03,gl(N,.5));const tr=trail(N,50);PU.push(t=>{const k=frac(t*.1);g.position.copy(ah).multiplyScalar((k*2-1)*8);tr(g.position,k<.02);});parr(V(0,0,0),a.clone().multiplyScalar(1),N,.08);}};
+function pbuild(){pclr();PG.visible=!!(PH.on||PH.real);if(!(PH.on||PH.real)||!cur)return;const f=PX[cur.id];try{PH.on&&f&&f(S);PH.real&&RS[cur.id]&&RS[cur.id](S);PH.real&&PS.on&&drawSym();}catch(e){console.error('physics',e);}}
+let cur,S={};
+const sel=$('#mod'),pre=$('#pre');
+sel.innerHTML=[...new Set(M.map(m=>m.g))].map(g=>`<optgroup label="${g}">`+M.filter(m=>m.g==g).map(m=>`<option value="${m.id}">${m.t}</option>`).join('')+'</optgroup>').join('');
+function load(id){STEP.k=0;cur=M.find(m=>m.id==id);$('#ttl').textContent=cur.t;$('#note').textContent=cur.f;pre.innerHTML=Object.keys(cur.pre).map((k,i)=>`<option value="${i}">${k}</option>`).join('');preset(0);}
+function preset(i){S={};cur.p.forEach(p=>S[p[0]]=Array.isArray(p[2])?p[3]:p[5]);Object.assign(S,Object.values(cur.pre)[i]);ui();draw();}
+function ui(){const box=$('#pr');box.innerHTML='';cur.p.forEach(p=>{const r=document.createElement('label');r.className='r';
+ if(Array.isArray(p[2])){r.innerHTML=`<span>${p[1]}</span><select>${p[2].map(x=>`<option${x==S[p[0]]?' selected':''}>${x}</option>`).join('')}</select>`;r.lastChild.onchange=e=>{S[p[0]]=e.target.value;draw();};}
+ else{r.innerHTML=`<span>${p[1]}</span><input type=range min=${p[2]} max=${p[3]} step=${p[4]} value=${S[p[0]]}><input type=number step=any value=${S[p[0]]}>`;const[a,b]=r.querySelectorAll('input');
+  a.oninput=()=>{S[p[0]]=+a.value;b.value=a.value;draw();};b.oninput=()=>{if(b.value==='')return;S[p[0]]=+b.value;a.value=b.value;draw();};}
+ box.appendChild(r);});}
+function draw(){clr();let rows;try{rows=cur.run(S,o);}catch(e){rows=ERR(e.message);}
+ $('#out').innerHTML=rows.map(r=>`<tr class="${/^✓/.test(r[0]+'')||/^✓/.test(r[1]+'')?'ok':/^✗/.test(r[0]+'')?'bad':''}"><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');pbuild();stepApply();rpDraw();}
+sel.onchange=()=>load(sel.value);pre.onchange=()=>preset(+pre.value);
+$('#rot').onclick=()=>ctl.autoRotate=!ctl.autoRotate;$('#rst').onclick=()=>{camera.position.copy(HOME);ctl.target.set(0,0,0);};
+function fit(){const w=innerWidth,h=innerHeight,wide=w>720,f=document.body.classList.contains('fs');rd.setSize(w,h);camera.aspect=w/h;camera.setViewOffset(w,h,wide&&!f?-180:0,!wide&&!f?h*.24:0,w,h);camera.updateProjectionMatrix();}
+const bn=$('#bn'),bs=$('#bs');
+function tg(){bn.setAttribute('aria-pressed',!!SH.num);bs.setAttribute('aria-pressed',!!SH.sym);TK.forEach(s=>s.visible=!!SH.num);AL.forEach(s=>s.visible=!!SH.sym);}
+bn.onclick=()=>{SH.num^=1;tg();draw();};bs.onclick=()=>{SH.sym^=1;tg();draw();};
+const bg=$('#bg'),ba=$('#ba'),bf=$('#bf'),bt=$('#bt'),bz=$('#bz'),bp=$('#bp');
+function sync(){bg.setAttribute('aria-pressed',GR.visible);ba.setAttribute('aria-pressed',!!ST.ax);bf.setAttribute('aria-pressed',!!ST.fl);
+ bt.setAttribute('aria-pressed',ST.th>0);bt.dataset.l=ST.th;bz.setAttribute('aria-pressed',LI>0);bz.dataset.l=LI+1;bp.setAttribute('aria-pressed',ST.pm>0);bp.dataset.l=ST.pm+1;
+ GR.material.transparent=AXH.material.transparent=true;GR.material.opacity=ST.ax?.25:1;AXH.material.opacity=ST.ax?.3:1;NEG.forEach(l=>l.material.opacity=ST.ax?.08:.3);}
+function relab(){TK.concat(AL).forEach(paint);draw();sync();}
+bg.onclick=()=>{GR.visible=!GR.visible;sync();};
+ba.onclick=()=>{ST.ax^=1;sync();};
+bf.onclick=()=>{ST.fl^=1;relab();};
+bt.onclick=()=>{ST.th=(ST.th+1)%3;draw();sync();};
+bz.onclick=()=>{LI=(LI+1)%3;relab();};
+bp.onclick=()=>{ST.pm=(ST.pm+1)%3;draw();sync();};
+function fs(on){const b=document.body;on=on===undefined?!b.classList.contains('fs'):on;b.classList.toggle('fs',on);fit();{const g=$('#gear');g.title=on?'Show / hide controls':'Show / hide view tools (numbers, symbols, grid, axes, labels, glow, size, fill, rotate, view, screenshot)';g.setAttribute('aria-label',on?'Show / hide controls':'View tools');}
+ try{if(on&&!document.fullscreenElement&&document.documentElement.requestFullscreen){const r=document.documentElement.requestFullscreen();r&&r.catch&&r.catch(()=>{});}else if(!on&&document.fullscreenElement)document.exitFullscreen();}catch(e){}}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('fs'))fs(false);});
+addEventListener('keydown',e=>{if(e.key=='Escape'&&document.body.classList.contains('fs'))fs(false);});
+let dn=null,lt=0,lp=null;const cv=rd.domElement;
+cv.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY,t:performance.now()};});
+cv.addEventListener('pointerup',e=>{if(!dn)return;const t=performance.now(),tap=Math.hypot(e.clientX-dn.x,e.clientY-dn.y)<10&&t-dn.t<300;dn=null;if(!tap)return;
+ if(lp&&t-lt<350&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)<30){fs();lt=0;lp=null;}else{lt=t;lp={x:e.clientX,y:e.clientY};}});
+const wp=$('#wp'),wr=$('#wr'),wh=$('#wh'),wv=$('#wv'),ws=$('#ws'),VW=[['I',V(13,10,17)],['T',V(0,24,.01)],['F',V(0,0,24)],['R',V(24,0,0)]];let vi=0;
+function pmode(){if(!PH.real&&PS.hid){PS.hid=0;draw();}$('#mode').textContent=PH.on?'⚛ Aesthetic physics scene':PH.real?'⚗ Real physics · '+(PS.on?'physics symbols':'algebra'):'Math view';wp.setAttribute('aria-pressed',!!PH.on);$('#wq').setAttribute('aria-pressed',!!PH.real);$('#php').style.display=(PH.on||PH.real)?'block':'none';pbuild();rpDraw();}
+wp.onclick=()=>{PH.on^=1;if(PH.on)PH.real=0;pmode();};
+$('#wq').onclick=()=>{PH.real^=1;if(PH.real)PH.on=0;pmode();};
+const wm=$('#wm'),wa=$('#wa');
+wm.onclick=()=>{PH.hide^=1;G.visible=!PH.hide;wm.setAttribute('aria-pressed',!!PH.hide);};
+wa.onclick=()=>{PH.pause^=1;wa.setAttribute('aria-pressed',!PH.pause);};
+wr.onclick=()=>{ctl.autoRotate=!ctl.autoRotate;wr.setAttribute('aria-pressed',ctl.autoRotate);};
+wh.onclick=()=>{camera.position.copy(HOME);ctl.target.set(0,0,0);vi=0;wv.dataset.l='I';};
+wv.onclick=()=>{vi=(vi+1)%VW.length;camera.position.copy(VW[vi][1]);ctl.target.set(0,0,0);ctl.update();wv.dataset.l=VW[vi][0];wv.setAttribute('aria-pressed',vi>0);};
+ws.onclick=()=>{rd.render(scene,camera);rd.domElement.toBlob(b=>{if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='vectors-'+(cur?cur.id:'scene')+'.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);});};
+$('#rot').addEventListener('click',()=>wr.setAttribute('aria-pressed',ctl.autoRotate));
+$('#rst').addEventListener('click',()=>{vi=0;wv.dataset.l='I';wv.setAttribute('aria-pressed',false);});
+
+/* ---------- long-press a point → coordinates (pinch/two-finger = OrbitControls) ---------- */
+const tip=$('#tip');let lpT=0,lpS=null,tipT=0,hl=null;cv.style.touchAction='none';
+function hideTip(){tip.style.display='none';if(hl){scene.remove(hl);hl=null;}}
+function showPt(x,y){const w=innerWidth,h=innerHeight;let best=null,bd=44;
+ for(const q of PTS){const v=q.p.clone().project(camera);if(v.z>1)continue;const d=Math.hypot((v.x+1)/2*w-x,(1-v.y)/2*h-y);if(d<bd){bd=d;best=q;}}
+ hideTip();if(!best)return;
+ hl=new THREE.Mesh(new THREE.SphereGeometry(.5,16,12),new THREE.MeshBasicMaterial({color:best.c,wireframe:true,transparent:true,opacity:.85}));hl.position.copy(best.p);scene.add(hl);
+ const p=best.p;tip.innerHTML=`<b>${best.l||'Point'}</b><br>x = ${fx(p.x)}<br>y = ${fx(p.y)}<br>z = ${fx(p.z)}<br>|OP| = ${fx(p.length())}`;
+ tip.style.display='block';tip.style.left=Math.min(x+14,w-230)+'px';tip.style.top=Math.max(8,y-100)+'px';
+ try{navigator.vibrate&&navigator.vibrate(25);}catch(e){}clearTimeout(tipT);tipT=setTimeout(hideTip,5000);}
+cv.addEventListener('pointerdown',e=>{hideTip();clearTimeout(lpT);if(!e.isPrimary){lpS=null;return;}lpS={x:e.clientX,y:e.clientY};lpT=setTimeout(()=>{if(lpS)showPt(lpS.x,lpS.y);lpS=null;},550);});
+cv.addEventListener('pointermove',e=>{if(lpS&&Math.hypot(e.clientX-lpS.x,e.clientY-lpS.y)>10){clearTimeout(lpT);lpS=null;}});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{clearTimeout(lpT);lpS=null;}));
+
+/* ---------- step-by-step solution mode: result rows + their graphics appear one step at a time ---------- */
+function stepApply(anim){
+ const rows=[...document.querySelectorAll('#out tr')],ch=G.children;STEP.n=rows.length;$('#sc').classList.toggle('on',!!STEP.on);
+ if(!STEP.on){rows.forEach(r=>r.classList.remove('hid','cur'));ch.forEach(c=>c.visible=true);return;}
+ STEP.k=Math.min(STEP.k,STEP.n);const n=Math.max(STEP.n,1),N=Math.max(ch.length,1);
+ ch.forEach((c,i)=>{const j=Math.floor(i*n/N),sh=j<STEP.k;if(!c.userData.bs)c.userData.bs=c.scale.clone();c.visible=sh;
+  if(sh&&anim&&j==STEP.k-1){c.scale.setScalar(.001);STEP.an.push({c,t0:performance.now()});}});
+ rows.forEach((r,i)=>{r.classList.toggle('hid',i>=STEP.k);r.classList.toggle('cur',i==STEP.k-1);});
+ $('#sl').textContent=STEP.k?`Step ${STEP.k}/${STEP.n}: ${rows[STEP.k-1].children[0].textContent}`:`Press ▶ to begin (0/${STEP.n})`;}
+function stepTick(now){if(!STEP.an.length)return;STEP.an=STEP.an.filter(a=>{const u=Math.min(1,(now-a.t0)/500),e=1-Math.pow(1-u,3);a.c.scale.copy(a.c.userData.bs).multiplyScalar(Math.max(e,.001));return u<1;});}
+function goStep(d){STEP.k=clamp(STEP.k+d,0,STEP.n);stepApply(d>0);if(STEP.k>=STEP.n)stopAuto();}
+function stopAuto(){clearInterval(STEP.timer);STEP.timer=0;$('#sa').textContent='⏵ Play';}
+$('#stp').onclick=()=>{STEP.on^=1;STEP.k=0;$('#stp').setAttribute('aria-pressed',!!STEP.on);stopAuto();stepApply();};
+$('#sn').onclick=()=>{stopAuto();goStep(1);};$('#sp').onclick=()=>{stopAuto();goStep(-1);};
+$('#sa').onclick=()=>{if(STEP.timer){stopAuto();return;}if(STEP.k>=STEP.n){STEP.k=0;stepApply();}$('#sa').textContent='⏸ Pause';STEP.timer=setInterval(()=>goStep(1),1700);};
+
+/* ---------- physics sliders: mass → body size, current → glow strength, speed → animation rate ---------- */
+const phM=$('#phM'),phI=$('#phI'),phV=$('#phV');
+function phy(rb){PHYS.m=+phM.value;PHYS.i=+phI.value;PHYS.v=+phV.value;PHYS.ms=Math.cbrt(PHYS.m);
+ $('#phR').innerHTML=`m = ${fx(PHYS.m)} · I = ${fx(PHYS.i)} · v = ${fx(PHYS.v)}<br>p = mv = ${fx(PHYS.m*PHYS.v)}<br>KE = ½mv² = ${fx(.5*PHYS.m*PHYS.v*PHYS.v)}<br>F ∝ I·v = ${fx(PHYS.i*PHYS.v)}`;if(rb)pbuild();rpDraw();}
+phM.oninput=phI.oninput=()=>phy(1);$('#php b').onclick=()=>$('#php').classList.toggle('min');if(innerWidth<720)$('#php').classList.add('min');phV.oninput=()=>phy(0);phy(0);
+
+/* ---------- declutter: gear tray + automatic label de-overlap ---------- */
+$('#gear').onclick=()=>{const t=document.body.classList.toggle('tb');$('#gear').setAttribute('aria-pressed',t);};
+const _up=new THREE.Vector3();
+const _cs={m:'',t:0,d:''};
+function decl(){const now=performance.now(),e=camera.matrixWorld.elements,sig=[e[0],e[5],e[10],e[12],e[13],e[14]].map(x=>x.toFixed(2)).join()+innerWidth+'x'+innerHeight;
+ if(sig!==_cs.m){_cs.m=sig;_cs.t=now;}
+ const sp=[...(G.visible?G.children:[]),...(PG.visible?PG.children:[])].filter(c=>c.isSprite&&c.visible&&c.material.visible);
+ sp.forEach(c=>{const u=c.userData;if(!u.b0){u.b0=c.position.clone();u.off=new THREE.Vector3();}if(u.bw){const k=clamp(camera.position.distanceTo(u.b0)/26,.55,1.25);c.scale.set(u.bw*k,u.bh*k,1);}});
+ /* solve only when the view has been still for a moment (never while rotating) */
+ if(now-_cs.t>350&&(sig!==_cs.d||sp.some(c=>!c.userData.tg))){_cs.d=sig;camera.updateMatrixWorld();_up.set(0,1,0).applyQuaternion(camera.quaternion);const w=innerWidth,h=innerHeight;
+  sp.forEach(c=>{const u=c.userData,v=u.b0.clone().project(camera);u.sx=(v.x+1)/2*w;u.sy=(1-v.y)/2*h;u.wpp=2*camera.position.distanceTo(u.b0)*Math.tan(camera.fov*Math.PI/360)/h;});
+  const o2=sp.slice().sort((a,b)=>b.userData.sy-a.userData.sy),pl=[];
+  o2.forEach(c=>{const u=c.userData,pw=c.scale.x/u.wpp,ph=c.scale.y/u.wpp;let y=u.sy;
+   for(let k=0;k<8;k++){const q=pl.find(q=>Math.abs(q.x-u.sx)<(q.w+pw)/2&&Math.abs(q.y-y)<(q.h+ph)/2);if(!q)break;y=q.y-(q.h+ph)/2;}
+   u.tg=_up.clone().multiplyScalar((u.sy-y)*u.wpp);pl.push({x:u.sx,y,w:pw,h:ph});});}
+ /* labels glide to their fixed world-space offsets; offsets are frozen during motion, so nothing vibrates */
+ sp.forEach(c=>{const u=c.userData;if(u.tg)u.off.lerp(u.tg,.15);c.position.copy(u.b0).add(u.off);});}
+
+/* ---------- REAL PHYSICS layer: readouts (sidebar) + live simulations (⚛ mode) built on each topic's own math ---------- */
+const G0=9.8,KE=8.99e9,MU0=4e-7*Math.PI,RP={},RS={};
+function polyline(pts,c,op){PG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:op})));}
+function liveLine(c){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c}));l.frustumCulled=false;PG.add(l);return(a,b)=>{g.attributes.position.array.set([a.x,a.y,a.z,b.x,b.y,b.z]);g.attributes.position.needsUpdate=true;};}
+function rpDraw(){const bx=$('#rp');if(!cur||!PH.real||!RP[cur.id]){bx.style.display='none';return;}let r=null;try{r=RP[cur.id](S);}catch(e){console.error(e);}
+ if(!r){bx.style.display='none';return;}bx.style.display='';$('#rpt').innerHTML=r.r.map(x=>`<tr class="${/^✓/.test(x[0])?'ok':/^✗/.test(x[0])?'bad':''}"><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');$('#rph').textContent='How: '+r.h;legend();}
+
+/* coord → moment of inertia: PA, PB, PC are lever arms, I = m·d² */
+RP.coord=s=>{const p=gv(s,'p'),{x,y,z}=p,m=PHYS.m,w=PHYS.v,Ix=m*(y*y+z*z),Iy=m*(z*z+x*x),Iz=m*(x*x+y*y);
+ return{r:[['I about x = m·PA²',fx(Ix)+' kg·m²'],['I about y = m·PB²',fx(Iy)+' kg·m²'],['I about z = m·PC²',fx(Iz)+' kg·m²'],['Spin about y, ω = Speed: L = Iω',fx(Iy*w)+' kg·m²/s'],['Spin energy ½Iω²',fx(.5*Iy*w*w)+' J'],['Potential energy m·g·y',fx(m*G0*y)+' J']],
+ h:'the distances from the axes (PA, PB, PC) are lever arms; a point mass has I = m·d², so they are the three moments of inertia. m = Mass slider. The orange ball spins about the y-axis at ω = Speed.'};};
+RS.coord=s=>{const p=gv(s,'p'),r=Math.hypot(p.x,p.z);if(r<.05)return;const a0=Math.atan2(p.z,p.x),b=ball(p.clone(),O,.2);ring(O,V(0,p.y,0),r,V(0,1,0));PU.push(t=>b.position.set(r*Math.cos(a0+t),p.y,r*Math.sin(a0+t)));};
+
+/* section → centre of mass, lever balance, two-body gravity & orbit (Kepler) */
+RP.section=s=>{const a=gv(s,'a'),b=gv(s,'b'),m=s.m,n=s.n,e=s.ex=='External',k=PHYS.m,d=a.distanceTo(b),MA=n*k,MB=m*k,den=e?m-n:m+n;if(Math.abs(den)<1e-9||d<1e-6)return null;
+ const c=a.clone().multiplyScalar(n).add(b.clone().multiplyScalar(m)).divideScalar(den),F=6.674e-11*MA*MB/(d*d),rows=[['Mass at A : at B',fx(MA)+' kg : '+fx(MB)+' kg'],['Balance point / centre of mass',fv(c)]];
+ if(!e){const T=MA+MB,rA=d*MB/T,rB=d*MA/T;rows.push(['Lever: torque about P (A | B)',fx(MA*G0*rA)+' | '+fx(MB*G0*rB)+' N·m'],['Orbit radii r_A | r_B about P',fx(rA)+' | '+fx(rB)+' m'],['Gravity G·MA·MB/d²',sci(F)+' N'],['Orbital period (real G)',sci(2*Math.PI*Math.sqrt(d*d*d/(6.674e-11*T)))+' s']);}
+ else rows.push(['External point','balance needs a counter-weight pulling the other way'],['Gravity G·MA·MB/d²',sci(F)+' N']);
+ return{r:rows,h:'the section formula (m·B + n·A)/(m+n) is exactly the centre of mass of mass n at A and mass m at B. Distances AP:PB = m:n make the torques about P equal (lever law). Both bodies circle P; r_A = d·MB/(MA+MB). Mass slider scales both masses.'};};
+function sci(x){return(+x).toExponential(2);}
+RS.section=s=>{const a=gv(s,'a'),b=gv(s,'b'),m=s.m,n=s.n;if(s.ex=='External'||m+n<1e-9)return;const k=PHYS.m,MA=n*k,MB=m*k,T=MA+MB,d=a.distanceTo(b);if(d<.1||T<=0)return;
+ const c=a.clone().multiplyScalar(n).add(b.clone().multiplyScalar(m)).divideScalar(m+n),e1=b.clone().sub(a).normalize();let e3=X(e1,V(0,1,0));if(e3.lengthSq()<1e-6)e3=X(e1,V(1,0,0));e3.normalize();
+ const e2=X(e3,e1),rA=d*MB/T,rB=d*MA/T,om=3*Math.sqrt(T/(d*d*d)),wa=ball(a.clone(),R,.12+.08*Math.cbrt(MA)),wb=ball(b.clone(),B,.12+.08*Math.cbrt(MB));ring(R,c,rA,e3,.03);ring(B,c,rB,e3,.03);
+ PU.push(t=>{const th=om*t,u=e1.clone().multiplyScalar(Math.cos(th)).addScaledVector(e2,Math.sin(th));wa.position.copy(c).addScaledVector(u,-rA);wb.position.copy(c).addScaledVector(u,rB);});};
+
+/* dc → projectile: direction cosines split the launch velocity */
+RP.dc=s=>{const v=gv(s,'d'),L=v.length();if(L<1e-9)return null;const u=v.clone().divideScalar(L),v0=12,vy=v0*u.y,vh=v0*Math.hypot(u.x,u.z),T=vy>0?2*vy/G0:0;
+ return{r:[['Launch speed',v0+' m/s'],['Components v·(l, m, n)',fv(u.clone().multiplyScalar(v0))+' m/s'],['Elevation angle',fx(Math.asin(clamp(u.y,-1,1))*RAD)+'°'],['Flight time 2v_y/g',T?fx(T)+' s':'needs m > 0 (upward)'],['Max height v_y²/2g',vy>0?fx(vy*vy/(2*G0))+' m':'—'],['Range v_h·T',vy>0?fx(vh*T)+' m':'—']],
+ h:'cosα, cosβ, cosγ resolve the launch speed into v·l, v·m, v·n. Gravity acts on the vertical (m, along y) component only; the other two stay constant, so the path is a parabola.'};};
+RS.dc=s=>{const v=gv(s,'d'),L=v.length();if(L<1e-9)return;const u=v.clone().divideScalar(L),v0=12,vy=v0*u.y;if(vy<=.01)return;const T=2*vy/G0,at=q=>V(v0*u.x*q,v0*u.y*q-.5*G0*q*q,v0*u.z*q),pts=[];
+ for(let i=0;i<=40;i++)pts.push(at(T*i/40));polyline(pts,Y,.55);ball(at(T),O,.18,.6);const b=ball(V(0,0,0),Y,.25),tr=trail(Y,60);PU.push(t=>{const q=t%(T+.7);b.position.copy(at(Math.min(q,T)));tr(b.position,q<.03);});};
+
+/* ang → Lorentz force: dot gives v∥, cross gives v⊥ and the force direction → helix */
+RP.ang=s=>{const v=gv(s,'u'),Bv=gv(s,'w'),Bm=Bv.length();if(zero(v)||Bm<1e-9)return null;const bh=Bv.clone().divideScalar(Bm),vp=v.dot(bh),vq=X(v,bh).length(),q=PHYS.i,m=PHYS.m,F=q*X(v,Bv).length();
+ return{r:[['v∥ = b₁·b₂ (dot)',fx(vp)+' m/s'],['v⊥ = |b₁×b₂| (cross)',fx(vq)+' m/s'],['Lorentz force q|v×B|',fx(F)+' N'],['Work rate F·v',fx(X(v,Bv).dot(v))+' W'],['Radius m·v⊥/(qB)',q>1e-9?fx(m*vq/(q*Bm))+' m':'∞ (q = 0)'],['Period 2πm/(qB)',q>1e-9?fx(2*Math.PI*m/(q*Bm))+' s':'—'],['Pitch v∥·T',q>1e-9?fx(vp*2*Math.PI*m/(q*Bm))+' m':'—']],
+ h:'read b₁ as a charge\'s velocity (m/s) and b₂ as the magnetic field (T). The dot product gives the part along B (unchanged); the cross product gives the sideways part and the force direction (green arrow). That force is ⊥ to v, so it does no work → helix. q = Current slider, m = Mass slider.'};};
+RS.ang=s=>{const v=gv(s,'u'),Bv=gv(s,'w'),Bm=Bv.length(),q=PHYS.i,m=PHYS.m;if(zero(v)||Bm<1e-9||q<1e-6)return;const bh=Bv.clone().divideScalar(Bm),vp=v.dot(bh),vv=v.clone().addScaledVector(bh,-vp),vq=vv.length(),w0=q*Bm/m,e1=vq>1e-6?vv.clone().normalize():tangent(bh),e2=X(e1,bh),
+ at=t=>bh.clone().multiplyScalar(vp*t).addScaledVector(e1,vq/w0*Math.sin(w0*t)).addScaledVector(e2,vq/w0*(1-Math.cos(w0*t))),span=clamp(2*Math.PI/w0*3,6,14),pts=[];
+ for(let i=0;i<=160;i++)pts.push(at(span*i/160));polyline(pts,P,.5);const b=ball(V(0,0,0),P,.22),tr=trail(P,80);PU.push(t=>{const k=t%(span+.6);b.position.copy(at(Math.min(k,span)));tr(b.position,k<.03);});};
+
+/* foot → magnetic field of a straight wire: distance to the line is the r in B = μ₀I/2πr */
+RP.foot=s=>{const p=gv(s,'p'),a=gv(s,'a'),b=gv(s,'b');if(zero(b))return null;const l=p.clone().sub(a).dot(b)/b.lengthSq(),q=a.clone().addScaledVector(b,l),d=p.distanceTo(q);if(d<1e-6)return null;
+ const I=10*PHYS.i,bh=b.clone().normalize(),dir=X(bh,p.clone().sub(q).divideScalar(d));
+ return{r:[['Wire current',fx(I)+' A (10 × Current slider)'],['Distance P → wire (PQ)',fx(d)+' m'],['B = μ₀I/(2πd)',fx(MU0*I/(2*Math.PI*d)*1e6)+' μT'],['B direction  b×PQ/d',fv(dir)],['Force on 1 m of a parallel wire, same I',fx(MU0*I*I/(2*Math.PI*d)*1e6)+' μN'],['B·b (circular field ⊥ wire)',fx(dir.dot(bh))]],
+ h:'the shortest distance from point to line (your PQ, from the foot of the perpendicular) is the radius in B = μ₀I/2πr. The field direction is b × PQ (right-hand rule): circles around the wire. The yellow ring is a field line.'};};
+RS.foot=s=>{const p=gv(s,'p'),a=gv(s,'a'),b=gv(s,'b');if(zero(b))return;const l=p.clone().sub(a).dot(b)/b.lengthSq(),q=a.clone().addScaledVector(b,l),d=p.distanceTo(q);if(d<1e-6)return;const bh=b.clone().normalize(),u1=p.clone().sub(q).divideScalar(d),u2=X(bh,u1);
+ ring(Y,q,d,bh,.03);parr(p,u2.clone().multiplyScalar(2.5),Y);const c=ball(p.clone(),O,.2);PU.push(t=>c.position.copy(q).addScaledVector(u1,d*Math.cos(1.2*t)).addScaledVector(u2,d*Math.sin(1.2*t)));};
+
+/* two → two aircraft: line distance (SD) vs real closest approach in time */
+RP.two=s=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');if(zero(b1)||zero(b2))return null;const da=a1.clone().sub(a2),db=b1.clone().sub(b2),vv=db.lengthSq(),t0=vv>1e-9?Math.max(0,-da.dot(db)/vv):0,dm=da.clone().addScaledVector(db,t0).length(),k=skew(a1,b1,a2,b2);
+ return{r:[['Time of closest approach t*',fx(t0)+' s'],['Minimum separation d_min',fx(dm)+' m'],['Shortest distance between paths (SD)',fx(k.sd)+' m'],['Relative speed |b₁−b₂|',fx(db.length())+' m/s'],[dm<.3?'✗ Collision risk':'✓ Safe pass',dm<.3?'d_min < 0.3 m':'d_min ≥ 0.3 m']],
+ h:'treat each line as a flight path with velocity b. SD is the gap between the paths; the real miss distance depends on timing: d_min = |(a₁−a₂)+(b₁−b₂)t*| with t* = −(Δa·Δb)/|Δb|². Always d_min ≥ SD; equal only if both craft reach the closest points together.'};};
+RS.two=s=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');if(zero(b1)||zero(b2))return;const da=a1.clone().sub(a2),db=b1.clone().sub(b2),vv=db.lengthSq(),t0=vv>1e-9?Math.max(0,-da.dot(db)/vv):0,tm=Math.min(t0,6)+2.5,
+ A=ball(a1.clone(),R,.22),Bb=ball(a2.clone(),B,.22),tA=trail(R,60),tB=trail(B,60),lk=liveLine(O);
+ PU.push(t=>{const k=t%(tm+.8),c=Math.min(k,tm),x1=a1.clone().addScaledVector(b1,c),x2=a2.clone().addScaledVector(b2,c);A.position.copy(x1);Bb.position.copy(x2);tA(x1,k<.03);tB(x2,k<.03);lk(x1,x2);});};
+
+/* plane → image charge in a conducting plane: force, work, falling charge */
+RP.plane=s=>{const n=gv(s,'n'),d=s.d,p=gv(s,'p'),L=n.length();if(L<1e-9)return null;const h=Math.abs(n.dot(p)-d)/L,q=PHYS.i*1e-3;if(h<1e-6)return null;
+ return{r:[['Charge q',fx(q*1e3)+' mC (1 mC × Current slider)'],['Height above plane h',fx(h)+' m'],['Image charge at P′',fv(p.clone().addScaledVector(n,-2*(n.dot(p)-d)/n.lengthSq()))],['Force kq²/(2h)²',fx(KE*q*q/(4*h*h))+' N toward plane'],['Work to bring from ∞, kq²/4h',fx(KE*q*q/(4*h))+' J'],['Acceleration F/m',fx(KE*q*q/(4*h*h)/PHYS.m)+' m/s²']],
+ h:'the image point P′ you compute is where a grounded conducting plane acts as if an opposite charge sat. Distance to the plane = h, so the charge feels Coulomb force kq²/(2h)². The orange ball falls toward the plane and speeds up as h shrinks.'};};
+RS.plane=s=>{const n=gv(s,'n'),d=s.d,p=gv(s,'p'),L=n.length();if(L<1e-9)return;const sg=Math.sign(n.dot(p)-d),h0=Math.abs(n.dot(p)-d)/L;if(!sg||h0<.05)return;const nh=n.clone().divideScalar(L),f0=p.clone().addScaledVector(nh,-sg*h0),q=PHYS.i*1e-3,m=PHYS.m,b=ball(p.clone(),O,.2);let h=h0,vh=0,last=0;
+ PU.push(t=>{let dt=t-last;last=t;if(dt<0||dt>.2)dt=0;dt*=.2;for(let i=0;i<8;i++){vh+=KE*q*q/(4*m*h*h)*dt/8;h-=vh*dt/8;}if(h<.25){h=h0;vh=0;}b.position.copy(f0).addScaledVector(nh,sg*h);});};
+
+/* pair → angle between planes: Malus polarizers & two-mirror optics */
+RP.pair=s=>{const n1=gv(s,'m'),n2=gv(s,'n');if(zero(n1)||zero(n2))return null;const c=n1.dot(n2)/(n1.length()*n2.length()),th=Math.acos(clamp(c,-1,1))*RAD,ac=Math.min(th,180-th),r=360/Math.max(ac,1e-6);
+ return{r:[['Angle between planes θ',fx(ac)+'°'],['Polarised light: I/I₀ = cos²θ',fx(c*c)],['Unpolarised light: I/I₀ = ½cos²θ',fx(.5*c*c)],['Two mirrors turn a ray by 2θ',fx(2*ac)+'°'],['Images 360°/θ − 1',Math.abs(r-Math.round(r))<1e-3?fx(Math.round(r)-1):'≈ '+fx(Math.round(r)-1)+' (360/θ not whole)']],
+ h:'the angle between two planes is the angle between their normals. Treat the planes as polarizer axes (Malus: I = I₀cos²θ) or as two mirrors (a ray turns by 2θ; a kaleidoscope forms 360°/θ − 1 images).'};};
+
+/* cop → scalar triple product = flux through a parallelogram, and mass of a block */
+RP.cop=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),t=a.dot(X(b,c)),z=Math.abs(t)<1e-6;
+ return{r:[['Flux of field a through b×c',fx(t)+' (field unit·m²)'],['Parallelepiped volume |[a b c]|',fx(Math.abs(t))+' m³'],['Mass at density ρ (Mass slider)',fx(Math.abs(t)*PHYS.m)+' kg'],[z?'✓ Coplanar':'✗ Not coplanar',z?'zero flux: field lies in the plane':'field pierces the plane']],
+ h:'b×c is the area vector of the parallelogram, so a·(b×c) is the flux of field a through it (Gauss-style Φ = E·A). It is also the volume of the block, so volume × density gives mass. Coplanar ⇒ zero flux.'};};
+
+/* ---------- REAL PHYSICS, part 2 ---------- */
+/* line → uniform motion: b is the velocity, closest approach = |a×b|/|b| */
+RP.line=s=>{const p=gv(s,'p'),q=gv(s,'q'),b=q.clone().sub(p);if(zero(b))return null;const sp=b.length(),m=PHYS.m,tc=-p.dot(b)/b.lengthSq();
+ return{r:[['Velocity b = PQ per second',fv(b)+' m/s'],['Speed |b|',fx(sp)+' m/s'],['Momentum m|b|',fx(m*sp)+' kg·m/s'],['Kinetic energy ½m|b|²',fx(.5*m*sp*sp)+' J'],['Position at t = λ',fv(p.clone().addScaledVector(b,s.t))],['Closest approach to origin |a×b|/|b|',fx(X(p,b).length()/sp)+' m'],['… reached at t',fx(tc)+' s'+(tc<0?' (already passed)':'')]],
+ h:'a line r = a + λb is a particle moving with constant velocity b, with λ as time. The foot of the perpendicular from the origin is the closest approach (radar / flyby distance); |a×b|/|b| is its length. m = Mass slider.'};};
+RS.line=s=>{const p=gv(s,'p'),q=gv(s,'q'),b=q.clone().sub(p);if(zero(b))return;const tc=-p.dot(b)/b.lengthSq(),c=p.clone().addScaledVector(b,tc),bl=ball(p.clone(),Y,.24),tr=trail(Y,60);
+ ball(c,N,.18,.7);bar(V(0,0,0),c,N,.02,gl(N,.4));PU.push(t=>{const k=(t*.5)%3,u=k-1;bl.position.copy(p).addScaledVector(b,u);tr(bl.position,k<.03);});};
+
+/* perp → work done by a force along a displacement */
+RP.perp=s=>{const F=V(5*s.l+2,-5,1),d=V(1,2*s.l,3),W_=F.dot(d),z=Math.abs(W_)<.03;
+ return{r:[['Force F = b₁',fv(F)+' N'],['Displacement d = b₂',fv(d)+' m'],['Work W = F·d',fx(W_)+' J'],['Component of F along d',fx(W_/d.length())+' N'],['Torque-like |F×d|',fx(X(F,d).length())+' N·m'],[z?'✓ Perpendicular':'✗ Not perpendicular',z?'force does no work':'angle '+fx(F.angleTo(d)*RAD)+'°']],
+ h:'work is the dot product F·d = Fd·cosθ. At λ = 1 the dot product is zero: the force is perpendicular to the motion, so it changes direction but adds no energy (like a magnetic or centripetal force).'};};
+
+/* lp → ray hits a plane: reflection and refraction (Snell) */
+function rays(s){const A=gv(s,'a'),dir=gv(s,'b').clone().sub(A),n=gv(s,'n'),d=s.d;if(zero(n)||zero(dir))return null;const nh=n.clone().normalize(),dn=n.dot(dir);if(Math.abs(dn)<1e-9)return null;
+ const t=(d-n.dot(A))/dn,H=A.clone().addScaledVector(dir,t),dh=dir.clone().normalize(),Nn=nh.clone().multiplyScalar(dh.dot(nh)>0?-1:1),c=-dh.dot(Nn),e=1/1.5,k=1-e*e*(1-c*c);
+ return{A,H,dh,t,c,refl:dh.clone().addScaledVector(Nn,2*c),refr:dh.clone().multiplyScalar(e).addScaledVector(Nn,e*c-Math.sqrt(k)),ti:Math.acos(clamp(c,-1,1))*RAD};}
+RP.lp=s=>{const r=rays(s);if(!r)return null;return{r:[['Hit point H',fv(r.H)],['Angle of incidence θ_i (from normal)',fx(r.ti)+'°'],['Angle line–plane',fx(90-r.ti)+'°'],['Reflected direction',fv(r.refl)],['Refracted (air→glass n=1.5), θ_t',fx(Math.asin(Math.sin(r.ti/RAD)/1.5)*RAD)+'°'],['Refracted direction',fv(r.refr)],['Critical angle glass→air',fx(Math.asin(1/1.5)*RAD)+'°']],
+ h:'the line is a light ray and the plane an interface. The normal n gives θ_i (cosθ_i = |d·n|). Reflection: r = d + 2cosθ_i·n. Refraction follows Snell: sinθ_t = sinθ_i/1.5. Watch the photon split at H.'};};
+RS.lp=s=>{const r=rays(s);if(!r)return;const L=r.H.distanceTo(r.A),b0=ball(r.A.clone(),Y,.2),b1=ball(r.H.clone(),R,.17),b2=ball(r.H.clone(),B,.17),t0=trail(Y,40),t1=trail(R,40),t2=trail(B,40);ball(r.H,W,.12,.8);
+ PU.push(t=>{const u=(t*.6)%2.4,q=u*8,go=q>L,e=Math.min(12,Math.max(0,q-L));b0.visible=!go;b1.visible=b2.visible=go;if(!go){b0.position.copy(r.A).addScaledVector(r.dh,Math.min(q,L));t0(b0.position,q<.3);}
+  else{b1.position.copy(r.H).addScaledVector(r.refl,e);b2.position.copy(r.H).addScaledVector(r.refr,e);t1(b1.position,e<.3);t2(b2.position,e<.3);}});};
+
+/* tri → uniform triangular plate: centre of mass and moment of inertia */
+RP.tri=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),u=b.clone().sub(a),v=c.clone().sub(a);if(zero(X(u,v)))return null;const ar=.5*X(u,v).length(),M_=PHYS.m*ar,q=a.distanceToSquared(b)+b.distanceToSquared(c)+c.distanceToSquared(a),I=M_*q/36,w=PHYS.v;
+ return{r:[['Area ½|AB×AC|',fx(ar)+' m²'],['Mass (σ = Mass slider, kg/m²)',fx(M_)+' kg'],['Centre of mass = centroid G',fv(a.clone().add(b).add(c).divideScalar(3))],['I about axis ⊥ plate through G = M(a²+b²+c²)/36',fx(I)+' kg·m²'],['Spin KE ½Iω², ω = Speed',fx(.5*I*w*w)+' J'],['Angular momentum Iω',fx(I*w)+' kg·m²/s']],
+ h:'a uniform triangular plate balances at its centroid G (the same point as the geometric centroid). Its moment of inertia about the normal axis through G depends only on the side lengths. The plate spins about that axis at ω = Speed.'};};
+RS.tri=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),nn=X(b.clone().sub(a),c.clone().sub(a));if(zero(nn))return;nn.normalize();const g=a.clone().add(b).add(c).divideScalar(3),vs=[a,b,c].map(p=>p.clone().sub(g)),bl=[R,B,P].map((col,i)=>ball(vs[i].clone().add(g),col,.2)),lk=[liveLine(W),liveLine(W),liveLine(W)];ball(g,Y,.22);bar(g.clone().addScaledVector(nn,-3),g.clone().addScaledVector(nn,3),Y,.025,gl(Y,.5));
+ PU.push(t=>{const p=vs.map((v,i)=>{const q=v.clone().applyAxisAngle(nn,t).add(g);bl[i].position.copy(q);return q;});lk[0](p[0],p[1]);lk[1](p[1],p[2]);lk[2](p[2],p[0]);});};
+
+/* pln → ray reflecting off the plane that contains two lines */
+RP.pln=s=>{const b1=gv(s,'b'),b2=gv(s,'d'),dp=gv(s,'c').clone().sub(gv(s,'a'));if(zero(b1)||zero(b2))return null;let n=X(b1,b2);if(zero(n))n=X(dp,b1);if(zero(n))return null;const nh=n.clone().normalize(),c=Math.abs(b1.dot(nh))/b1.length();
+ return{r:[['Plane normal n',fv(nh)],['Ray b₁: angle from normal θ_i',fx(Math.acos(clamp(c,0,1))*RAD)+'°'],['Reflected ray',fv(b1.clone().addScaledVector(nh,-2*b1.dot(nh)))],['Reflection keeps |b₁|',fx(b1.length())+' m/s']],
+ h:'the plane through two lines acts as a flat mirror. Its normal n = b₁×b₂ gives the reflected ray r = b₁ − 2(b₁·n)n (angle in = angle out).'};};
+/* mir → plane mirror: object and image are equidistant (image-charge force) */
+RP.mir=s=>{const p=gv(s,'p'),q=gv(s,'q'),n=q.clone().sub(p),d=n.length()/2;if(d<1e-6)return null;const k=PHYS.i*1e-3;
+ return{r:[['Mirror normal n = PP′/|PP′|',fv(n.clone().normalize())],['Mirror passes through M',fv(p.clone().add(q).multiplyScalar(.5))],['Object distance = image distance',fx(d)+' m'],['Magnification',' +1 (virtual, upright)'],['If P is a charge q (Current × 1 mC): F = kq²/(2d)²',fx(KE*k*k/(4*d*d))+' N']],
+ h:'P′ is the mirror image of P, so the mirror is the perpendicular bisector plane of PP′. Optics: image distance = object distance. Electrostatics: a conducting plane acts like an opposite charge at P′.'};};
+
+/* ---------- PHYSICS-SYMBOL VIEW (F button): real symbols, vector arrows with true direction; algebra view stays the default ---------- */
+const PS={on:0,hid:0},Z0=V(0,0,0),vs=s=>s+'\u20D7',ht=s=>s+'\u0302',RY={};
+const qi=(s,name,v,at,u,col,len)=>({s,name,v,at,u,col,len}),sc=(s,name,val,u)=>({s,name,val,u});
+function drawSym(){PS.hid=1;G.children.forEach(c=>{if(c.isSprite)c.material.visible=false;});let it=[];try{it=RY[cur.id]?RY[cur.id](S):[];}catch(e){console.error(e);}
+ it.forEach(x=>{if(!x.v)return;const L=x.v.length();if(L<1e-9)return;const len=x.len||clamp(L,2,6),d=x.v.clone().normalize(),c=x.col||Y;parr(x.at,d.clone().multiplyScalar(len),c,.07);
+  const sp=sprite(x.s+'  '+fx(L)+(x.u?' '+x.u:''),c);sp.userData.m=.85;paint(sp);sp.position.copy(x.at).addScaledVector(d,len).add(V(0,.7,0));PG.add(sp);});}
+const ml=t=>String(t).replace(/(.)\u20D7/gu,'<span class="vc">$1</span>').replace(/(.)\u0302/gu,'<span class="ht">$1</span>');
+function legend(){const t=$('#rpy');if(!PS.on||!cur||!RY[cur.id]){t.innerHTML='';return;}let it=[];try{it=RY[cur.id](S);}catch(e){}
+ t.innerHTML='<tr><th colspan=2 style="color:var(--ac)">Physics symbols (vectors are drawn as arrows in the scene)</th></tr>'+it.map(x=>`<tr><th>${ml(x.s)}<br><small>${x.name}</small></th><td>${x.v?fv(x.v)+' '+(x.u||'')+' <small>vector</small>':fx(x.val)+' '+(x.u||'')+' <small>scalar</small>'}</td></tr>`).join('');}
+RY.coord=s=>{const p=gv(s,'p'),w=V(0,PHYS.v,0);return[qi(vs('r'),'position',p,Z0,'m',Y),qi(vs('ω'),'angular velocity',w,Z0,'rad/s',N,3),qi(vs('v'),'velocity = ω×r',X(w,p),p,'m/s',O),qi(vs('g'),'gravity',V(0,-G0,0),p,'m/s²',R,2.5),sc('m','mass',PHYS.m,'kg')];};
+RY.section=s=>{const a=gv(s,'a'),b=gv(s,'b'),m=s.m,n=s.n,den=s.ex=='External'?m-n:m+n,k=PHYS.m;if(Math.abs(den)<1e-9)return[];const c=a.clone().multiplyScalar(n).add(b.clone().multiplyScalar(m)).divideScalar(den);
+ return[qi(vs('W')+'_A','weight of A',V(0,-n*k*G0,0),a,'N',R),qi(vs('W')+'_B','weight of B',V(0,-m*k*G0,0),b,'N',B),qi(vs('R')+'_cm','centre of mass',c,Z0,'m',Y)];};
+RY.dc=s=>{const v=gv(s,'d'),L=v.length();if(L<1e-9)return[];const u=v.clone().divideScalar(L),T=u.y>0?2*12*u.y/G0:0;return[qi(vs('v')+'₀','launch velocity',u.clone().multiplyScalar(12),Z0,'m/s',Y),qi(vs('g'),'gravity',V(0,-G0,0),Z0,'m/s²',R,2.5),qi(vs('R'),'range',V(12*u.x*T,0,12*u.z*T),Z0,'m',O),sc('T','flight time',T,'s')];};
+RY.ang=s=>{const v=gv(s,'u'),Bv=gv(s,'w'),q=PHYS.i;return[qi(vs('v'),'velocity',v,Z0,'m/s',R),qi(vs('B'),'magnetic field',Bv,Z0,'T',B),qi(vs('F'),'Lorentz force q v×B',X(v,Bv).multiplyScalar(q),Z0,'N',N),sc('q','charge (Current slider)',q,'C'),sc('m','mass',PHYS.m,'kg')];};
+RY.foot=s=>{const p=gv(s,'p'),a=gv(s,'a'),b=gv(s,'b');if(zero(b))return[];const l=p.clone().sub(a).dot(b)/b.lengthSq(),q=a.clone().addScaledVector(b,l),d=p.distanceTo(q);if(d<1e-6)return[];const bh=b.clone().normalize(),I=10*PHYS.i;
+ return[qi(vs('I'),'current direction',bh.clone().multiplyScalar(I),q,'A',O),qi(vs('r'),'from wire to P',p.clone().sub(q),q,'m',W),qi(vs('B'),'magnetic field',X(bh,p.clone().sub(q).divideScalar(d)).multiplyScalar(MU0*I/(2*Math.PI*d)*1e6),p,'μT',Y,2.5)];};
+RY.two=s=>{const a1=gv(s,'a'),b1=gv(s,'b'),a2=gv(s,'c'),b2=gv(s,'d');return[qi(vs('v')+'₁','velocity 1',b1,a1,'m/s',R),qi(vs('v')+'₂','velocity 2',b2,a2,'m/s',B),qi(vs('v')+'_rel','relative velocity',b1.clone().sub(b2),a1,'m/s',O)];};
+RY.plane=s=>{const n=gv(s,'n'),d=s.d,p=gv(s,'p'),L=n.length();if(L<1e-9)return[];const sg=Math.sign(n.dot(p)-d),h=Math.abs(n.dot(p)-d)/L,q=PHYS.i*1e-3;if(!sg||h<1e-6)return[];const nh=n.clone().divideScalar(L);
+ return[qi(ht('n'),'plane normal',nh,p.clone().addScaledVector(nh,-sg*h),'',W,3),qi(vs('F'),'force toward plane',nh.clone().multiplyScalar(-sg*KE*q*q/(4*h*h)),p,'N',R),sc('q','charge',q*1e3,'mC'),sc('h','height',h,'m')];};
+RY.line=s=>{const p=gv(s,'p'),q=gv(s,'q'),b=q.clone().sub(p);return[qi(vs('r'),'start position',p,Z0,'m',W),qi(vs('v'),'velocity',b,p,'m/s',Y),sc('m','mass',PHYS.m,'kg')];};
+RY.perp=s=>[qi(vs('F'),'force',V(5*s.l+2,-5,1),Z0,'N',R),qi(vs('d'),'displacement',V(1,2*s.l,3),Z0,'m',B),sc('W','work F·d',V(5*s.l+2,-5,1).dot(V(1,2*s.l,3)),'J')];
+RY.lp=s=>{const r=rays(s);if(!r)return[];return[qi(ht('k')+'_i','incident',r.dh,r.H.clone().addScaledVector(r.dh,-3),'',Y,3),qi(ht('k')+'_r','reflected',r.refl,r.H,'',R,3),qi(ht('k')+'_t','refracted',r.refr,r.H,'',B,3),sc('θ_i','incidence angle',r.ti,'°')];};
+RY.tri=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c'),A=X(b.clone().sub(a),c.clone().sub(a)).multiplyScalar(.5);if(A.lengthSq()<1e-12)return[];const g=a.clone().add(b).add(c).divideScalar(3);return[qi(vs('A'),'area vector',A,g,'m²',Y),qi(vs('ω'),'angular velocity',A.clone().normalize().multiplyScalar(PHYS.v),g,'rad/s',N,3)];};
+RY.cop=s=>{const a=gv(s,'a'),b=gv(s,'b'),c=gv(s,'c');return[qi(vs('E'),'field',a,Z0,'',R),qi(vs('A'),'area vector b×c',X(b,c),Z0,'m²',B),sc('Φ','flux E·A',a.dot(X(b,c)),'')];};
+RY.pair=s=>[qi(ht('n')+'₁','normal 1',gv(s,'m'),Z0,'',R,3),qi(ht('n')+'₂','normal 2',gv(s,'n'),Z0,'',B,3)];
+RY.pln=s=>{const b1=gv(s,'b'),b2=gv(s,'d');let n=X(b1,b2);if(zero(n))n=X(gv(s,'c').clone().sub(gv(s,'a')),b1);if(zero(n))return[];const nh=n.normalize(),a=gv(s,'a');return[qi(vs('v')+'_i','incoming ray',b1,a,'',R),qi(vs('v')+'_r','reflected ray',b1.clone().addScaledVector(nh,-2*b1.dot(nh)),a,'',N),qi(ht('n'),'plane normal',nh,a,'',W,3)];};
+RY.mir=s=>{const p=gv(s,'p'),q=gv(s,'q'),n=q.clone().sub(p);if(n.length()<1e-9)return[];return[qi(vs('r'),'object → image',n,p,'m',Y),qi(ht('n'),'mirror normal',n.clone().normalize(),p.clone().add(q).multiplyScalar(.5),'',W,3)];};
+$('#wy').onclick=()=>{PS.on^=1;$('#wy').setAttribute('aria-pressed',!!PS.on);if(PS.on&&!PH.real)$('#wq').click();else{draw();pmode();}};
+let _rz=0;addEventListener('resize',()=>{cancelAnimationFrame(_rz);_rz=requestAnimationFrame(fit);});fit();const LS={get(){try{return JSON.parse(localStorage.getItem('v3dnotes')||'{}');}catch(e){return{};}},set(o){try{localStorage.setItem('v3dnotes',JSON.stringify(Object.assign(LS.get(),o)));}catch(e){}}};
+const sv=LS.get();load(M.some(m=>m.id==sv.t)?sv.t:'coord');sel.value=cur.id;if(sv.tb)$('#gear').click();if(sv.mo==1)wp.click();if(sv.mo==2)$('#wq').click();sync();
+sel.addEventListener('change',()=>LS.set({t:sel.value}));$('#gear').addEventListener('click',()=>LS.set({tb:document.body.classList.contains('tb')?1:0}));
+[wp,$('#wq')].forEach(b=>b.addEventListener('click',()=>LS.set({mo:PH.on?1:PH.real?2:0})));
+let pl=performance.now();
+(function loop(){requestAnimationFrame(loop);const n=performance.now(),dt=Math.min(.05,(n-pl)/1000);pl=n;ctl.update();
+ if(PH.on||PH.real){if(!PH.pause)PT+=dt*PHYS.v;for(const f of PU)f(PT);}
+ stepTick(n);decl();rd.render(scene,camera);})();
+</script>
+</body>
+</html>
